@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import GalleryItem, { GalleryItemProps } from '../molecules/GalleryItem';
 import GalleryFilter from '../molecules/GalleryFilter';
-import { Heading, Paragraph } from '../atoms';
+import GalleryGrid from './GalleryGrid';
+import { GalleryItemProps } from '../molecules/GalleryItem';
 
+// Move data to a separate file or keep here if static. Keeping here for now as per original.
 const galleryItems: GalleryItemProps[] = [
     {
         id: 1,
@@ -86,39 +87,17 @@ const GallerySection = () => {
     });
 
     return (
-        <section className="bg-white py-20 min-h-screen">
-            <div className="container mx-auto px-6 lg:px-12 xl:px-24">
+        <div className="space-y-8">
+            {/* Filters */}
+            <GalleryFilter
+                filters={categories}
+                activeFilter={activeFilter}
+                onFilterChange={setActiveFilter}
+            />
 
-                {/* Header */}
-                <div className="text-center mb-12">
-                    <Heading className="text-4xl lg:text-5xl font-extrabold text-gray-900 mb-4">Galeri Kami</Heading>
-                    <Paragraph className="text-gray-600 max-w-2xl mx-auto">
-                        Momen-momen berharga dari kegiatan pelatihan, budaya, dan keseruan siswa LPK PB Merdeka.
-                    </Paragraph>
-                </div>
-
-                {/* Filters */}
-                <GalleryFilter
-                    filters={categories}
-                    activeFilter={activeFilter}
-                    onFilterChange={setActiveFilter}
-                />
-
-                {/* Masonry Grid */}
-                <div className="columns-1 md:columns-2 lg:columns-3 gap-8 space-y-8">
-                    {filteredItems.map(item => (
-                        <GalleryItem key={item.id} {...item} />
-                    ))}
-                </div>
-
-                {filteredItems.length === 0 && (
-                    <div className="text-center py-20 text-gray-500">
-                        <p>Tidak ada media ditemukan untuk kategori ini.</p>
-                    </div>
-                )}
-
-            </div>
-        </section>
+            {/* Grid */}
+            <GalleryGrid items={filteredItems} />
+        </div>
     );
 };
 

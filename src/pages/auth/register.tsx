@@ -49,7 +49,7 @@ export default function RegisterPage() {
             <Head>
                 <title>Daftar Akun | LPK PB Merdeka</title>
             </Head>
-            <Navbar />
+            <Navbar hideNavigation={true} />
             <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6 pt-20">
                 <div className="bg-white shadow-xl p-8 rounded-xl w-full max-w-md border border-gray-100">
                     <h1 className="text-2xl font-bold text-center mb-2 text-gray-900">Daftar Akun Baru</h1>

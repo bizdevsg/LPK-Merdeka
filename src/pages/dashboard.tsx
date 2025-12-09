@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-// import { Navbar } from "../components/organisms"; // Navbar replaced by custom header
+import { Navbar } from "../components/organisms";
 import { DashboardSidebar } from "../components/organisms/DashboardSidebar";
 import Head from "next/head";
 import Image from "next/image";
@@ -137,30 +137,10 @@ export default function DashboardPage() {
             <Head>
                 <title>Dashboard | LPK PB Merdeka</title>
             </Head>
-            {/* Dashboard Header */}
-            <header className="fixed top-0 left-0 w-full z-50 bg-red-600 shadow-md h-20 flex items-center px-4 lg:px-8 transition-colors dark:bg-red-800">
-                <div className="container mx-auto flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="relative w-10 h-10">
-                            <Image
-                                src="/assets/LPK-White.png"
-                                alt="LPK PB Merdeka"
-                                fill
-                                className="object-contain"
-                            />
-                        </div>
-                        <div>
-                            <h1 className="text-white text-xl font-bold leading-none">LPK PB Merdeka</h1>
-                            <p className="text-red-100 text-xs font-medium">Lembaga Pelatihan Kerja</p>
-                        </div>
-                    </div>
-                    <button onClick={toggleTheme} className="p-2 rounded-full hover:bg-white/10 text-white transition-colors">
-                        {theme === 'dark' ? <FaSun /> : <FaMoon />}
-                    </button>
-                </div>
-            </header>
+            {/* Navbar with hideNavigation */}
+            <Navbar hideNavigation={true} />
 
-            <div className="min-h-screen bg-gray-50 dark:bg-zinc-800 transition-colors"> {/* pt-20 matches header height exactly */}
+            <div className="min-h-screen bg-gray-50 dark:bg-zinc-800 transition-colors">
                 <div className="container mx-auto px-4 lg:px-8 py-8">
                     <div className="flex flex-col md:flex-row gap-8 items-start">
                         {/* Left Sidebar */}
@@ -177,12 +157,6 @@ export default function DashboardPage() {
                                     <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
                                     <p className="text-gray-500 text-sm">Selamat datang kembali, {user?.name}</p>
                                 </div>
-                                <button
-                                    onClick={handleLogout}
-                                    className="px-4 py-2 text-sm border border-gray-200 text-gray-600 font-medium rounded-lg hover:bg-gray-50 transition bg-white"
-                                >
-                                    Logout
-                                </button>
                             </div>
 
                             {renderContent()}

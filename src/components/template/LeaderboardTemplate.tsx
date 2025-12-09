@@ -41,26 +41,29 @@ export const LeaderboardTemplate = ({ data }: LeaderboardTemplateProps) => {
           let heightClass = "h-40";
           let colorClass = "bg-gray-100";
           let iconColor = "text-gray-400";
-
+          let orderClass = "";
           if (index === 1) { // 1st Place (Center)
             rank = 1;
             heightClass = "h-56";
             colorClass = "bg-yellow-100 border-yellow-300";
             iconColor = "text-yellow-500";
+            orderClass = "order-1 md:order-none";
           } else if (index === 0) { // 2nd Place (Left)
             rank = 2;
             heightClass = "h-48";
             colorClass = "bg-gray-100 border-gray-300";
             iconColor = "text-gray-400";
+            orderClass = "order-2 md:order-none";
           } else { // 3rd Place (Right)
             rank = 3;
             heightClass = "h-40";
             colorClass = "bg-orange-100 border-orange-300";
             iconColor = "text-orange-500";
+            orderClass = "order-3 md:order-none";
           }
 
           return (
-            <div key={user.id} className="flex flex-col items-center w-full md:w-1/3 group">
+            <div key={user.id} className={`flex flex-col items-center w-full md:w-1/3 group ${orderClass}`}>
               {/* Avatar */}
               <div className={`relative mb-4 transition-transform duration-300 ${rank === 1 ? 'w-24 h-24 -mt-12 group-hover:scale-110' : 'w-20 h-20 group-hover:-translate-y-2'}`}>
                 {rank === 1 && (

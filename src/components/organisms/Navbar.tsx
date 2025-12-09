@@ -4,9 +4,9 @@ import { useRouter } from "next/router";
 import { Navbar as NavbarMolecule } from "../molecules";
 import { useAuth } from "@/context/AuthContext";
 
-export const Navbar = () => {
+export const Navbar = ({ hideNavigation = false }: { hideNavigation?: boolean }) => {
   const router = useRouter();
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, user, logout } = useAuth();
 
   const navItems = [
     { id: "beranda", label: "Beranda", href: "/" },
@@ -49,8 +49,10 @@ export const Navbar = () => {
       onLoginClick={() => router.push("/auth/login")}
       onRegisterClick={() => router.push("/auth/register")}
       isAuthenticated={isAuthenticated}
+      user={user}
       onDashboardClick={() => router.push("/dashboard")}
       onLogoutClick={logout}
+      hideNavigation={hideNavigation}
     />
   );
 };

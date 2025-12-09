@@ -1,12 +1,18 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { NavBarButton } from "../atoms";
-import { FaBars, FaTimes, FaSun, FaMoon } from "react-icons/fa"; // import icon hamburger
+import { FaBars, FaTimes, FaSun, FaMoon, FaChevronDown, FaSignOutAlt, FaTachometerAlt } from "react-icons/fa"; // import icon hamburger
 import { useTheme } from "@/context/ThemeContext";
 
 export interface NavItem {
   id: string;
   label: string;
   href?: string;
+}
+
+interface User {
+  name?: string;
+  email?: string;
+  avatar?: string;
 }
 
 interface NavbarProps {
@@ -17,8 +23,10 @@ interface NavbarProps {
   onLoginClick?: () => void;
   onRegisterClick?: () => void;
   isAuthenticated?: boolean;
+  user?: User | null;
   onLogoutClick?: () => void;
   onDashboardClick?: () => void;
+  hideNavigation?: boolean;
 }
 
 
@@ -30,12 +38,16 @@ export const Navbar: React.FC<NavbarProps> = ({
   onLoginClick,
   onRegisterClick,
   isAuthenticated,
+  user,
   onLogoutClick,
-  onDashboardClick
+  onDashboardClick,
+  hideNavigation = false,
 }) => {
   const [internalActiveNav, setInternalActiveNav] = useState(navItems[0]?.id);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const { theme, toggleTheme } = useTheme();
 
   const currentActiveNav = activeId || internalActiveNav;
@@ -49,12 +61,24 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
+  const toggleDropdown = () => setIsDropdownOpen(!isDropdownOpen);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 0);
     window.addEventListener("scroll", handleScroll);
 
-    return () => window.removeEventListener("scroll", handleScroll);
+    // Click outside handler for dropdown
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
   }, []);
 
   return (
@@ -68,32 +92,71 @@ export const Navbar: React.FC<NavbarProps> = ({
           {logo ? logo : <span className="font-bold text-xl">LPK</span>}
         </div>
 
-        {/* Desktop menu */}
-        <div className="hidden md:flex items-center justify-center flex-1 gap-4">
-          {navItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => handleNavClick(item.id)}
-              className={`text-sm px-5 py-2 rounded-full transition-all duration-300 font-medium ${currentActiveNav === item.id
-                ? "bg-white text-red-600 shadow-lg"
-                : "text-red-50 hover:bg-red-500/50 hover:text-white"
-                }`}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
+        {/* Desktop menu - HIDE if hideNavigation is true */}
+        {!hideNavigation && (
+          <div className="hidden md:flex items-center justify-center flex-1 gap-4">
+            {navItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => handleNavClick(item.id)}
+                className={`text-sm px-5 py-2 rounded-full transition-all duration-300 font-medium ${currentActiveNav === item.id
+                  ? "bg-white text-red-600 shadow-lg"
+                  : "text-red-50 hover:bg-red-500/50 hover:text-white"
+                  }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Desktop buttons on right */}
         <div className="hidden md:flex items-center gap-3 flex-shrink-0">
           <button onClick={toggleTheme} className="p-2 rounded-full hover:bg-white/10 text-white transition-colors">
             {theme === 'dark' ? <FaSun /> : <FaMoon />}
           </button>
+
           {isAuthenticated ? (
-            <>
-              <NavBarButton label="User Login" variant="primary" onClick={onDashboardClick} />
-              <NavBarButton label="Logout" variant="ghost" onClick={onLogoutClick} />
-            </>
+            <div className="relative" ref={dropdownRef}>
+              <div
+                className="flex items-center gap-2 bg-red-700/50 hover:bg-red-700 rounded-full px-4 py-1.5 cursor-pointer transition-colors border border-red-500/50 select-none"
+                onClick={toggleDropdown}
+              >
+                {/* Placeholder Avatar */}
+                <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold border border-white/30">
+                  {user?.name?.charAt(0).toUpperCase() || "U"}
+                </div>
+                <span className="text-sm font-medium max-w-[100px] truncate hidden lg:block">{user?.name || "User"}</span>
+                <FaChevronDown className={`text-xs transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+              </div>
+
+              {/* Dropdown Menu */}
+              {isDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl py-1 text-gray-800 animate-fade-in border border-gray-100 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50">
+                    <p className="text-sm font-bold text-gray-900 truncate">{user?.name}</p>
+                    <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+                  </div>
+                  {!hideNavigation && (
+                    <button
+                      onClick={onDashboardClick}
+                      className="w-full text-left px-4 py-2.5 text-sm hover:bg-red-50 text-gray-700 hover:text-red-600 flex items-center gap-2 transition-colors"
+                    >
+                      <FaTachometerAlt className="text-gray-400 group-hover:text-red-500" />
+                      Dashboard
+                    </button>
+                  )}
+
+                  <button
+                    onClick={onLogoutClick}
+                    className="w-full text-left px-4 py-2.5 text-sm hover:bg-red-50 text-red-600 flex items-center gap-2 transition-colors border-t border-gray-50"
+                  >
+                    <FaSignOutAlt />
+                    Logout
+                  </button>
+                </div>
+              )}
+            </div>
           ) : (
             <>
               <NavBarButton label="Masuk" variant="ghost" onClick={onLoginClick} />
@@ -103,18 +166,20 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
 
-        {/* Mobile hamburger icon */}
-        <button
-          className="md:hidden text-2xl"
-          onClick={toggleMenu}
-        >
-          {isMenuOpen ? <FaTimes /> : <FaBars />}
-        </button>
+        {/* Mobile hamburger icon - HIDE if hideNavigation is true */}
+        {!hideNavigation && (
+          <button
+            className="md:hidden text-2xl"
+            onClick={toggleMenu}
+          >
+            {isMenuOpen ? <FaTimes /> : <FaBars />}
+          </button>
+        )}
       </div>
 
       {/* Mobile menu drawer */}
-      {isMenuOpen && (
-        <div className="md:hidden bg-red-600 flex flex-col px-6 py-4 gap-4 animate-slide-down">
+      {isMenuOpen && !hideNavigation && (
+        <div className="md:hidden bg-red-600 flex flex-col px-6 py-4 gap-4 animate-slide-down border-t border-red-500/30">
           {navItems.map((item) => (
             <button
               key={item.id}
@@ -127,8 +192,25 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {isAuthenticated ? (
             <>
-              <NavBarButton label="Dashboard" variant="secondary" onClick={onDashboardClick} />
-              <NavBarButton label="Logout" variant="ghost" onClick={onLogoutClick} />
+              <div className="border-t border-red-500/50 pt-4 mt-2">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center font-bold border border-white/30">
+                    {user?.name?.charAt(0).toUpperCase() || "U"}
+                  </div>
+                  <div>
+                    <p className="font-semibold">{user?.name}</p>
+                    <p className="text-xs opacity-80">{user?.email}</p>
+                  </div>
+                </div>
+                <NavBarButton label="Dashboard" variant="secondary" onClick={onDashboardClick} />
+                <button
+                  onClick={onLogoutClick}
+                  className="w-full text-left py-3 text-white/90 font-medium flex items-center gap-2 hover:text-white mt-1"
+                >
+                  <FaSignOutAlt />
+                  Logout
+                </button>
+              </div>
             </>
           ) : (
             <>
