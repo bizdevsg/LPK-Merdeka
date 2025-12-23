@@ -1,40 +1,84 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/pages/api-reference/create-next-app).
+# LPK Merdeka
 
-## Getting Started
+LPK Merdeka is a website platform for Job Training Institutions (LPK) designed to provide information regarding training programs, activity galleries, testimonials, and support. This website is built using modern web technologies to ensure fast performance and a responsive interface.
 
-First, run the development server:
+## 🚀 Key Features
+
+- **Home & Information Page**: Presents key information about LPK Merdeka.
+- **Training Programs**: A complete list of available training programs.
+- **Gallery**: Documentation of training activities and events.
+- **Testimonials**: Reviews from alumni and training participants.
+- **Help & Support**: A help center for user inquiries.
+- **User Dashboard**: A dedicated area for registered users.
+- **Authentication**: Login and registration system (Auth).
+- **Responsive Design**: Optimized display for various devices (Desktop, Tablet, Mobile).
+
+## 🛠 Technologies Used
+
+This project is built using the following *tech stack*:
+
+- **[Next.js](https://nextjs.org/)**: React framework for production (using Pages Router).
+- **[React](https://react.dev/)**: JavaScript library for building user interfaces.
+- **[TypeScript](https://www.typescriptlang.org/)**: A JavaScript superset that adds static typing.
+- **[Tailwind CSS](https://tailwindcss.com/)**: A utility-first CSS framework for rapid styling.
+- **[Framer Motion](https://www.framer.com/motion/)**: Library for smooth and interactive animations.
+- **Icons**: Uses `lucide-react`, `react-icons`, and `@fortawesome` for a comprehensive icon collection.
+
+## 📂 Project Structure
+
+The source code for this project is organized using the **Atomic Design** approach within the `src/components` folder:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+src/
+├── components/
+│   ├── atoms/       # Smallest components (Button, Input, Icon, etc.)
+│   ├── molecules/   # Combinations of atoms (FormGroup, Card, etc.)
+│   ├── organisms/   # Combinations of molecules (Navbar, Footer, Section, etc.)
+│   └── template/    # Main page layouts
+├── pages/           # Next.js page routing
+│   ├── api/         # API Routes
+│   ├── auth/        # Login/Register pages
+│   ├── dashboard.tsx # Dashboard page
+│   └── ...          # Other pages (about, program, etc.)
+├── styles/          # Global style configuration
+└── context/         # React Context for global state management
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 📦 How to Run the Project
 
-You can start editing the page by modifying `pages/index.tsx`. The page auto-updates as you edit the file.
+Follow these steps to run the project on your local machine:
 
-[API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.ts`.
+1.  **Clone the repository** (if you haven't already):
+    ```bash
+    git clone https://github.com/username/lpk-merdeka.git
+    cd lpk-merdeka
+    ```
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) instead of React pages.
+2.  **Install dependencies**:
+    ```bash
+    npm install
+    # or
+    yarn install
+    # or
+    pnpm install
+    # or
+    bun install
+    ```
 
-This project uses [`next/font`](https://nextjs.org/docs/pages/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+3.  **Run the development server**:
+    ```bash
+    npm run dev
+    ```
 
-## Learn More
+4.  **Open in browser**:
+    Open [http://localhost:3000](http://localhost:3000) to see the result.
 
-To learn more about Next.js, take a look at the following resources:
+## 📜 Available Scripts
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn-pages-router) - an interactive Next.js tutorial.
+- `npm run dev`: Runs the development server.
+- `npm run build`: Builds the application for production.
+- `npm run start`: Runs the production server after building.
+- `npm run lint`: Runs the linter to check the code.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/pages/building-your-application/deploying) for more details.
+---
+Developed by the LPK Merdeka IT Team.
