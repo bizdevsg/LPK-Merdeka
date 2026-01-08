@@ -50,7 +50,7 @@ Follow these steps to run the project on your local machine:
 
 1.  **Clone the repository** (if you haven't already):
     ```bash
-    git clone https://github.com/username/lpk-merdeka.git
+    git clone https://github.com/ahqsa24/lpk-merdeka.git
     cd lpk-merdeka
     ```
 
