@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import Head from "next/head";
-import { Navbar } from "../../components/organisms";
+import { Navbar } from "@/components/shared/organisms";
 import { useAuth } from "@/context/AuthContext";
 
 export default function LoginPage() {
