@@ -1,5 +1,13 @@
 import React, { useState } from "react";
-import { FaUser, FaCertificate, FaHistory, FaTrophy, FaBook, FaFileAlt, FaVideo, FaGamepad, FaChevronDown, FaChevronRight, FaCalendarCheck } from "react-icons/fa";
+import Image from "next/image";
+import {
+    FaUser, FaCertificate, FaHistory, FaTrophy,
+    FaBook, FaFileAlt, FaVideo, FaGamepad,
+    FaChevronDown, FaChevronRight, FaCalendarCheck,
+    FaSignOutAlt
+} from "react-icons/fa";
+import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/router";
 
 interface SidebarItem {
     id: string;
@@ -15,37 +23,37 @@ interface SidebarGroup {
 interface DashboardSidebarProps {
     activeTab: string;
     onTabChange: (tabId: string) => void;
+    isOpen?: boolean;
+    onClose?: () => void;
 }
 
-export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabChange }) => {
+export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabChange, isOpen, onClose }) => {
+    const { logout } = useAuth();
+    const router = useRouter();
+
     const menuGroups: SidebarGroup[] = [
         {
-            title: "User Login LPK PB Merdeka",
+            title: "Menu Utama",
             items: [
-                { id: "profil", label: "Profil User", icon: <FaUser /> },
+                { id: "profil", label: "Profil Saya", icon: <FaUser /> },
                 { id: "absensi", label: "Absensi", icon: <FaCalendarCheck /> },
-                { id: "program", label: "Program yang diikuti", icon: <FaFileAlt /> },
-                { id: "sertifikat", label: "Sertifikat Digital", icon: <FaCertificate /> },
-                { id: "riwayat", label: "Riwayat Kompetisi", icon: <FaHistory /> },
+                { id: "program", label: "Program Saya", icon: <FaFileAlt /> },
             ],
         },
         {
-            title: "Kompetisi",
+            title: "Akademik",
             items: [
-                { id: "kompetisi-aktif", label: "Kompetisi Aktif", icon: <FaTrophy /> },
-                { id: "rulebook", label: "Rulebook & Tata Tertib", icon: <FaBook /> }, // Using Book for rules
-                { id: "pendaftaran", label: "Pendaftaran", icon: <FaFileAlt /> },
-                { id: "leaderboard", label: "Leaderboard", icon: <FaTrophy /> },
-                { id: "arsip", label: "Arsip Kompetisi", icon: <FaHistory /> },
+                { id: "kompetisi-aktif", label: "Kompetisi", icon: <FaTrophy /> },
+                { id: "sertifikat", label: "Sertifikat", icon: <FaCertificate /> },
+                { id: "riwayat", label: "Riwayat", icon: <FaHistory /> },
             ],
         },
         {
-            title: "Materi",
+            title: "Pusat Belajar",
             items: [
-                { id: "artikel", label: "Artikel Edukasi", icon: <FaBook /> },
-                { id: "ebook", label: "E-Book", icon: <FaBook /> },
+                { id: "materi", label: "Materi Belajar", icon: <FaBook /> },
                 { id: "video", label: "Video Tutorial", icon: <FaVideo /> },
-                { id: "kuis", label: "Kuis Ringan", icon: <FaGamepad /> },
+                { id: "kuis", label: "Kuis & Latihan", icon: <FaGamepad /> },
             ],
         },
     ];
@@ -56,45 +64,82 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, o
         setCollapsedGroups(prev => ({ ...prev, [title]: !prev[title] }));
     };
 
+    const handleLogout = () => {
+        logout();
+        router.push("/auth/login");
+    };
+
     return (
-        <aside className="w-full md:w-64 bg-white shadow-lg md:h-[calc(100vh-80px)] overflow-y-auto sticky top-20 rounded-xl md:rounded-none md:bg-transparent md:shadow-none">
-            <div className="p-4 space-y-6">
-                {menuGroups.map((group) => (
-                    <div key={group.title}>
-                        <button
-                            onClick={() => toggleGroup(group.title)}
-                            className="flex items-center justify-between w-full text-left mb-2 group"
-                        >
-                            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider group-hover:text-red-600 transition-colors">
+        <>
+            {/* Backdrop for mobile */}
+            {isOpen && (
+                <div
+                    className="fixed inset-0 bg-black/50 z-20 md:hidden"
+                    onClick={onClose}
+                />
+            )}
+
+            <aside className={`
+                fixed top-0 left-0 z-30 h-full w-64 bg-white dark:bg-zinc-900 border-r border-gray-100 dark:border-zinc-800
+                transform transition-transform duration-300 ease-in-out
+                ${isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
+            `}>
+                {/* Logo Area */}
+                {/* Logo Area */}
+                <div className="h-20 flex items-center gap-3 px-6 border-b border-gray-100 dark:border-zinc-800">
+                    <div className="relative w-8 h-8">
+                        <Image
+                            src="/assets/Logo-Tab.png"
+                            alt="Logo LPK"
+                            fill
+                            className="object-contain"
+                        />
+                    </div>
+                    <span className="font-bold text-lg text-gray-900 dark:text-white">LPK Merdeka</span>
+                </div>
+
+                {/* Menu Area */}
+                <div className="flex-1 overflow-y-auto py-6 px-4 space-y-8">
+                    {menuGroups.map((group) => (
+                        <div key={group.title}>
+                            <h3 className="px-2 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
                                 {group.title}
                             </h3>
-                            <span className="text-gray-400">
-                                {collapsedGroups[group.title] ? <FaChevronRight size={10} /> : <FaChevronDown size={10} />}
-                            </span>
-                        </button>
-
-                        {!collapsedGroups[group.title] && (
                             <div className="space-y-1">
                                 {group.items.map((item) => (
                                     <button
                                         key={item.id}
-                                        onClick={() => onTabChange(item.id)}
-                                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${activeTab === item.id
-                                            ? "bg-red-50 text-red-600 shadow-sm"
-                                            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                                        onClick={() => {
+                                            onTabChange(item.id);
+                                            if (window.innerWidth < 768 && onClose) onClose();
+                                        }}
+                                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${activeTab === item.id
+                                            ? "bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400"
+                                            : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-zinc-800 hover:text-gray-900 dark:hover:text-white"
                                             }`}
                                     >
-                                        <span className={`${activeTab === item.id ? "text-red-600" : "text-gray-400"}`}>
+                                        <span className={`text-lg ${activeTab === item.id ? "text-red-600 dark:text-red-400" : "text-gray-400 group-hover:text-gray-600"}`}>
                                             {item.icon}
                                         </span>
                                         {item.label}
                                     </button>
                                 ))}
                             </div>
-                        )}
-                    </div>
-                ))}
-            </div>
-        </aside>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Footer Area */}
+                <div className="p-4 border-t border-gray-100 dark:border-zinc-800">
+                    <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors"
+                    >
+                        <FaSignOutAlt />
+                        Keluar
+                    </button>
+                </div>
+            </aside>
+        </>
     );
 };

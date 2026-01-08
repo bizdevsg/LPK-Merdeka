@@ -1,50 +1,37 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { Navbar } from "../components/shared/organisms";
-import { DashboardSidebar, ProfileForm, AttendanceSessionList } from "../components/dashboard/organisms";
 import Head from "next/head";
-import Image from "next/image";
-
-import { FaSun, FaMoon } from "react-icons/fa";
-import { useTheme } from "@/context/ThemeContext";
+import { DashboardSidebar, ProfileForm, AttendanceSessionList } from "../components/dashboard/organisms";
+import { useAuth } from "@/context/AuthContext";
+import { FaBars } from "react-icons/fa";
 
 export default function DashboardPage() {
     const router = useRouter();
-    const [user, setUser] = useState<{ name: string; email: string } | null>(null);
+    const { user, isAuthenticated } = useAuth();
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState("profil");
-    const { theme, toggleTheme } = useTheme();
+    const [activeTab, setActiveTab] = useState("absensi");
+    const [sidebarOpen, setSidebarOpen] = useState(false);
 
     useEffect(() => {
-        // Check for auth token
-        const token = localStorage.getItem("token");
-        const userData = localStorage.getItem("user");
+        // Simple auth check delay or logic if needed, 
+        // but useAuth handles state mostly.
+        const timer = setTimeout(() => setLoading(false), 500);
+        return () => clearTimeout(timer);
+    }, []);
 
-        if (!token) {
+    useEffect(() => {
+        if (!loading && !isAuthenticated) {
             router.push("/auth/login");
-            return;
         }
-
-        if (userData) {
-            try {
-                setUser(JSON.parse(userData));
-            } catch (e) {
-                console.error("Failed to parse user data", e);
-            }
-        }
-        setLoading(false);
-    }, [router]);
-
-    const handleLogout = () => {
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-        router.push("/auth/login");
-    };
+    }, [loading, isAuthenticated, router]);
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-600"></div>
+            <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-zinc-950">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="w-10 h-10 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                    <p className="text-gray-500 text-sm font-medium">Memuat Dashboard...</p>
+                </div>
             </div>
         );
     }
@@ -54,38 +41,24 @@ export default function DashboardPage() {
             case "absensi":
                 return <AttendanceSessionList />;
             case "profil":
-                return (
-                    <div className="space-y-6">
-                        <ProfileForm />
-                    </div>
-                );
+                return <ProfileForm />;
             case "kompetisi-aktif":
+                // Placeholder for now, or existing code if I had it. 
+                // I'll put a simple placeholder card.
                 return (
-                    <div className="space-y-6">
-                        <h2 className="text-2xl font-bold text-gray-800">Kompetisi Aktif</h2>
-                        <div className="bg-white p-6 rounded-xl border border-red-100 bg-red-50/50">
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <span className="inline-block px-3 py-1 bg-red-100 text-red-600 text-xs font-semibold rounded-full mb-3">Seasonal</span>
-                                    <h3 className="text-xl font-bold text-gray-900 mb-2">Lomba Pidato Bahasa Jepang Season 2</h3>
-                                    <p className="text-gray-600 mb-4 max-w-2xl">Tunjukkan kemampuan berbicara bahasa Jepangmu dan menangkan hadiah total 5 Juta Rupiah + Sertifikat Resmi.</p>
-                                    <div className="flex gap-4 text-sm text-gray-500 mb-6">
-                                        <span className="flex items-center gap-1">📅 Deadline: 25 Des 2023</span>
-                                        <span className="flex items-center gap-1">👥 Peserta: 45/100</span>
-                                    </div>
-                                    <button className="bg-red-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-red-700 transition">Daftar Sekarang</button>
-                                </div>
-                            </div>
+                    <div className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-700 rounded-xl p-6">
+                        <h2 className="text-xl font-bold mb-4">Kompetisi Aktif</h2>
+                        <div className="p-8 text-center bg-gray-50 dark:bg-zinc-800 rounded-lg border border-dashed border-gray-200 dark:border-zinc-700">
+                            <p className="text-gray-500">Belum ada kompetisi yang diikuti.</p>
                         </div>
                     </div>
                 );
-            // Default fallback for other tabs
             default:
                 return (
-                    <div className="flex flex-col items-center justify-center py-20 bg-white rounded-xl border border-dashed border-gray-300">
-                        <div className="text-6xl mb-4">🚧</div>
-                        <h3 className="text-xl font-bold text-gray-400">Halaman Belum Tersedia</h3>
-                        <p className="text-gray-500 mt-2">Fitur <span className="font-semibold text-gray-700">{activeTab}</span> sedang dalam pengembangan.</p>
+                    <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-zinc-900 rounded-xl border border-dashed border-gray-200 dark:border-zinc-700">
+                        <div className="text-4xl mb-4 opacity-50">🚧</div>
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-white">Fitur Dalam Pengembangan</h3>
+                        <p className="text-gray-500 mt-1 text-sm">Halaman <span className="font-semibold text-red-600">{activeTab}</span> akan segera tersedia.</p>
                     </div>
                 );
         }
@@ -96,31 +69,47 @@ export default function DashboardPage() {
             <Head>
                 <title>Dashboard | LPK PB Merdeka</title>
             </Head>
-            {/* Navbar with hideNavigation */}
-            <Navbar hideNavigation={true} />
 
-            <div className="min-h-screen bg-gray-50 dark:bg-zinc-800 transition-colors">
-                <div className="container mx-auto px-4 lg:px-8 py-8">
-                    <div className="flex flex-col md:flex-row gap-8 items-start">
-                        {/* Left Sidebar */}
-                        <div className="w-full md:w-64 flex-shrink-0">
-                            {/* Import Sidebar dynamically to avoid circular dependencies if any, though standard import is fine */}
-                            <DashboardSidebar activeTab={activeTab} onTabChange={setActiveTab} />
+            <div className="min-h-screen bg-gray-50 dark:bg-zinc-950">
+                {/* Fixed Sidebar */}
+                <DashboardSidebar
+                    activeTab={activeTab}
+                    onTabChange={setActiveTab}
+                    isOpen={sidebarOpen}
+                    onClose={() => setSidebarOpen(false)}
+                />
+
+                {/* Main Content Area */}
+                <div className="md:ml-64 min-h-screen transition-all duration-300">
+                    {/* Top Header */}
+                    <header className="sticky top-0 z-20 md:static bg-white md:bg-transparent border-b md:border-none border-gray-100 dark:border-zinc-800 h-16 px-4 md:px-8 flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <button
+                                onClick={() => setSidebarOpen(true)}
+                                className="md:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                            >
+                                <FaBars size={20} />
+                            </button>
+                            <h1 className="text-lg font-semibold text-gray-800 dark:text-white capitalize">
+                                {activeTab.replace('-', ' ')}
+                            </h1>
                         </div>
 
-                        {/* Right Content */}
-                        <div className="flex-grow w-full">
-                            {/* Header for Mobile/Context */}
-                            <div className="flex justify-between items-center mb-6">
-                                <div>
-                                    <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-                                    <p className="text-gray-500 text-sm">Selamat datang kembali, {user?.name}</p>
-                                </div>
+                        <div className="flex items-center gap-4">
+                            <div className="text-right hidden md:block">
+                                <p className="text-sm font-semibold text-gray-900 dark:text-white">{user?.name}</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">{user?.role || 'Peserta'}</p>
                             </div>
-
-                            {renderContent()}
+                            <div className="w-9 h-9 bg-red-100 text-red-600 rounded-full flex items-center justify-center font-bold text-sm">
+                                {user?.name?.charAt(0) || 'U'}
+                            </div>
                         </div>
-                    </div>
+                    </header>
+
+                    {/* Content Scrollable Area */}
+                    <main className="p-4 md:p-8 max-w-7xl mx-auto">
+                        {renderContent()}
+                    </main>
                 </div>
             </div>
         </>

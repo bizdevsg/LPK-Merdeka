@@ -16,7 +16,6 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-poppins), sans-serif;
-  padding-top: 100px;
 }
 
 @keyframes scroll {
