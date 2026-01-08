@@ -188,11 +188,13 @@ export default function UsersManagement() {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${user.role === 'admin'
+                                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${user.role === 'superAdmin'
                                                 ? 'bg-purple-100 text-purple-700'
-                                                : 'bg-green-100 text-green-700'
+                                                : user.role === 'admin'
+                                                    ? 'bg-blue-100 text-blue-700'
+                                                    : 'bg-green-100 text-green-700'
                                                 }`}>
-                                                {user.role}
+                                                {user.role === 'superAdmin' ? 'Super Admin' : user.role === 'admin' ? 'Admin' : 'User'}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-sm text-gray-500">
@@ -200,18 +202,24 @@ export default function UsersManagement() {
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex items-center justify-end gap-2">
-                                                <button
-                                                    onClick={() => handleEdit(user)}
-                                                    className="p-2 hover:bg-gray-100 rounded-lg text-blue-600 transition"
-                                                >
-                                                    <FaEdit />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDeleteClick(user.id)}
-                                                    className="p-2 hover:bg-gray-100 rounded-lg text-red-600 transition"
-                                                >
-                                                    <FaTrash />
-                                                </button>
+                                                {user.role === 'admin' || user.role === 'superAdmin' ? (
+                                                    <span className="text-xs text-gray-400 italic">Manage via Admins page</span>
+                                                ) : (
+                                                    <>
+                                                        <button
+                                                            onClick={() => handleEdit(user)}
+                                                            className="p-2 hover:bg-gray-100 rounded-lg text-blue-600 transition"
+                                                        >
+                                                            <FaEdit />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeleteClick(user.id)}
+                                                            className="p-2 hover:bg-gray-100 rounded-lg text-red-600 transition"
+                                                        >
+                                                            <FaTrash />
+                                                        </button>
+                                                    </>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
