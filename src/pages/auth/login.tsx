@@ -15,27 +15,48 @@ export default function LoginPage() {
 
     const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        setLoading(true);
-        setError("");
+        // Default to localhost if env not set (failsafe)
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
 
         try {
-            const response = await fetch("/api/auth/login", {
+            const response = await fetch(`${API_URL}/login`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json"
+                },
                 body: JSON.stringify({ email, password }),
             });
 
-            const data = await response.json();
+            let data;
+            const responseText = await response.text();
+
+            try {
+                data = JSON.parse(responseText);
+            } catch (e) {
+                console.error("API Error (Non-JSON):", responseText);
+                throw new Error(`Sistem error (Status: ${response.status}). Cek konsol browser.`);
+            }
 
             if (!response.ok) {
-                throw new Error(data?.message || "Login gagal, periksa email dan password.");
+                // Handle Laravel validation errors (e.g. 422 Unprocessable Entity)
+                if (data.errors) {
+                    const errorMessages = Object.values(data.errors).flat().join(", ");
+                    throw new Error(errorMessages || data.message || "Data yang dimasukkan tidak valid");
+                }
+
+                throw new Error(data.message || data.error || "Login gagal, periksa email dan password.");
             }
 
             // Save token and user info via context
-            login(data.token, data.user);
-
-            console.log("Login berhasil");
-            router.push("/dashboard");
+            // Assuming response structure: { token: "...", user: { ... } }
+            if (data.token && data.user) {
+                login(data.token, data.user);
+                console.log("Login berhasil");
+                router.push("/dashboard");
+            } else {
+                throw new Error("Format respons tidak valid dari server");
+            }
         } catch (err: unknown) {
             if (err instanceof Error) {
                 setError(err.message);

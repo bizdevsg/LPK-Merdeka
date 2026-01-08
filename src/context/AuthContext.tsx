@@ -2,9 +2,11 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { useRouter } from "next/router";
 
 interface User {
+    id?: number;
     name?: string;
     email?: string;
-    // Add other user properties as needed
+    role?: string;
+    avatar?: string;
 }
 
 interface AuthContextType {
@@ -22,19 +24,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [user, setUser] = useState<User | null>(null);
     const router = useRouter();
 
-    const checkAuth = () => {
+    const checkAuth = async () => {
         const token = localStorage.getItem("token");
-        const userData = localStorage.getItem("user");
 
-        if (token && userData) {
-            setIsAuthenticated(true);
-            try {
-                setUser(JSON.parse(userData));
-            } catch (e) {
-                console.error("Failed to parse user data", e);
+        if (!token) {
+            setIsAuthenticated(false);
+            setUser(null);
+            return;
+        }
+
+        try {
+            const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+            const response = await fetch(`${API_URL}/user`, {
+                method: "GET",
+                headers: {
+                    "Authorization": `Bearer ${token}`,
+                    "Accept": "application/json"
+                }
+            });
+
+            if (response.ok) {
+                const userData = await response.json();
+                setIsAuthenticated(true);
+                setUser(userData);
+                localStorage.setItem("user", JSON.stringify(userData));
+            } else {
+                // Token invalid or expired
+                localStorage.removeItem("token");
+                localStorage.removeItem("user");
+                setIsAuthenticated(false);
                 setUser(null);
             }
-        } else {
+        } catch (error) {
+            console.error("Auth check failed", error);
             setIsAuthenticated(false);
             setUser(null);
         }

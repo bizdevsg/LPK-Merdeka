@@ -9,25 +9,54 @@ export default function RegisterPage() {
     const [name, setName] = useState<string>("");
     const [email, setEmail] = useState<string>("");
     const [password, setPassword] = useState<string>("");
+    const [passwordConfirmation, setPasswordConfirmation] = useState<string>("");
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string>("");
 
     const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        setLoading(true);
-        setError("");
+
+        if (password !== passwordConfirmation) {
+            setError("Password dan Konfirmasi Password tidak cocok");
+            return;
+        }
+
+        // Default to localhost if env not set (failsafe)
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
 
         try {
-            const response = await fetch("/api/auth/register", {
+            const response = await fetch(`${API_URL}/register`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name, email, password }),
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json"
+                },
+                body: JSON.stringify({
+                    name,
+                    email,
+                    password,
+                    password_confirmation: passwordConfirmation
+                }),
             });
 
-            const data = await response.json();
+            let data;
+            const responseText = await response.text();
+
+            try {
+                data = JSON.parse(responseText);
+            } catch (e) {
+                console.error("API Error (Non-JSON):", responseText);
+                throw new Error(`Sistem error (Status: ${response.status}). Cek konsol browser.`);
+            }
 
             if (!response.ok) {
-                throw new Error(data?.message || "Pendaftaran gagal, coba lagi.");
+                // Handle Laravel validation errors
+                if (data.errors) {
+                    const errorMessages = Object.values(data.errors).flat().join(", ");
+                    throw new Error(errorMessages || data.message || "Data pendaftaran tidak valid");
+                }
+
+                throw new Error(data.message || data.error || "Pendaftaran gagal, coba lagi.");
             }
 
             console.log("Registrasi berhasil");
@@ -93,6 +122,18 @@ export default function RegisterPage() {
                                 placeholder="••••••••"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
+                                required
+                                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Konfirmasi Password</label>
+                            <input
+                                type="password"
+                                placeholder="••••••••"
+                                value={passwordConfirmation}
+                                onChange={(e) => setPasswordConfirmation(e.target.value)}
                                 required
                                 className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition"
                             />
