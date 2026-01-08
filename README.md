@@ -26,23 +26,43 @@ This project is built using the following *tech stack*:
 
 ## 📂 Project Structure
 
-The source code for this project is organized using the **Atomic Design** approach within the `src/components` folder:
+The source code for this project is organized using a **section-based component structure** for better maintainability and scalability:
 
 ```bash
 src/
 ├── components/
-│   ├── atoms/       # Smallest components (Button, Input, Icon, etc.)
-│   ├── molecules/   # Combinations of atoms (FormGroup, Card, etc.)
-│   ├── organisms/   # Combinations of molecules (Navbar, Footer, Section, etc.)
-│   └── template/    # Main page layouts
-├── pages/           # Next.js page routing
-│   ├── api/         # API Routes
-│   ├── auth/        # Login/Register pages
-│   ├── dashboard.tsx # Dashboard page
-│   └── ...          # Other pages (about, program, etc.)
-├── styles/          # Global style configuration
-└── context/         # React Context for global state management
+│   ├── shared/          # Reusable components across all sections
+│   │   ├── atoms/       # Basic UI elements (Button, Input, Heading, etc.)
+│   │   ├── molecules/   # Combined atoms (FormField, LineHeading, etc.)
+│   │   ├── organisms/   # Complex components (Navbar, Footer, SplashScreen)
+│   │   └── Layout.tsx   # Main layout wrapper
+│   ├── home/            # Home page specific components
+│   │   ├── atoms/
+│   │   ├── molecules/
+│   │   ├── organisms/
+│   │   └── HomeTemplate.tsx
+│   ├── about/           # About page components
+│   ├── program/         # Program page components
+│   ├── syllabus/        # Syllabus page components
+│   ├── contact/         # Contact page components
+│   ├── gallery/         # Gallery page components
+│   ├── leaderboard/     # Leaderboard components
+│   └── dashboard/       # Dashboard components
+├── pages/               # Next.js page routing
+│   ├── api/             # API Routes
+│   ├── auth/            # Login/Register pages
+│   ├── dashboard.tsx    # Dashboard page
+│   └── ...              # Other pages (about, program, etc.)
+├── styles/              # Global style configuration
+└── context/             # React Context for global state management
 ```
+
+### Component Organization Philosophy
+
+- **Section-based**: Each major feature/page has its own folder with dedicated components
+- **Atomic Design within sections**: Each section follows atoms → molecules → organisms hierarchy
+- **Shared components**: Common UI elements are centralized in the `shared/` folder
+- **Template files**: Each section has a main template file (e.g., `HomeTemplate.tsx`) that composes the page
 
 ## 📦 How to Run the Project
 
