@@ -23,9 +23,9 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
         try {
             // Get attendance records for this session with user details
             const records = await prisma.attendance_records.findMany({
-                where: { session_id: BigInt(id) },
+                where: { attendance_session_id: BigInt(id) },
                 include: {
-                    user: {
+                    users: {
                         select: {
                             id: true,
                             name: true,
@@ -33,10 +33,17 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
                         }
                     }
                 },
-                orderBy: { checked_in_at: 'asc' }
+                orderBy: { check_in_time: 'asc' }
             });
 
-            return res.json(serializeBigInt(records));
+            // Remap for frontend consistency
+            const mappedRecords = records.map((r: any) => ({
+                ...r,
+                checked_in_at: r.check_in_time, // Alias for frontend
+                user: r.users // Map users relation to user field expected by frontend
+            }));
+
+            return res.json(serializeBigInt(mappedRecords));
         } catch (error) {
             console.error(error);
             return res.status(500).json({ message: 'Error fetching attendance records' });

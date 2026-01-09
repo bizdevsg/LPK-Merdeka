@@ -9,6 +9,7 @@ interface AttendanceSession {
     start_time: string;
     end_time: string;
     is_active: boolean;
+    is_checked_in?: boolean;
 }
 
 export const AttendanceSessionList: React.FC = () => {
@@ -72,6 +73,11 @@ export const AttendanceSessionList: React.FC = () => {
                 const timeStr = result.check_in_time;
                 const niceTime = timeStr ? formatTime(timeStr) : 'Baru saja';
                 setMessage({ type: 'success', text: `Berhasil Absen! Pukul: ${niceTime}` });
+
+                // Update local state to reflect that user has checked in
+                setSessions(prevSessions => prevSessions.map(s =>
+                    s.id === sessionId ? { ...s, is_checked_in: true } : s
+                ));
             } else {
                 setMessage({ type: 'error', text: `Gagal: ${result.message || 'Terjadi kesalahan'}` });
             }
@@ -144,13 +150,15 @@ export const AttendanceSessionList: React.FC = () => {
 
                                 <button
                                     onClick={() => handleCheckIn(session.id)}
-                                    disabled={checkingIn === session.id || !session.is_active}
-                                    className={`px-6 py-2.5 rounded-lg font-medium transition shadow-sm ${session.is_active
-                                        ? 'bg-red-600 hover:bg-red-700 text-white hover:shadow-red-200'
-                                        : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                    disabled={checkingIn === session.id || !session.is_active || session.is_checked_in}
+                                    className={`px-6 py-2.5 rounded-lg font-medium transition shadow-sm ${session.is_checked_in
+                                        ? 'bg-green-100 text-green-700 cursor-not-allowed border border-green-200'
+                                        : session.is_active
+                                            ? 'bg-red-600 hover:bg-red-700 text-white hover:shadow-red-200'
+                                            : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                                         }`}
                                 >
-                                    {checkingIn === session.id ? 'Memproses...' : 'Absen Sekarang'}
+                                    {checkingIn === session.id ? 'Memproses...' : session.is_checked_in ? 'Sudah Absen' : 'Absen Sekarang'}
                                 </button>
                             </div>
                         </div>

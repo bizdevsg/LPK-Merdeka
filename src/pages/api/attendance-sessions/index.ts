@@ -4,15 +4,41 @@ import { prisma } from '@/lib/prisma';
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (req.method === 'GET') {
         try {
-            // Fetch only active sessions
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
+            // Lazy Expiration Check
+            const activeSessions = await prisma.attendance_sessions.findMany({
+                where: { is_active: true }
+            });
 
+            const now = new Date();
+            const updates = [];
+
+            for (const session of activeSessions) {
+                const year = session.date.getFullYear();
+                const month = session.date.getMonth();
+                const day = session.date.getDate();
+                const hours = session.end_time.getHours();
+                const minutes = session.end_time.getMinutes();
+
+                const combined = new Date(year, month, day, hours, minutes);
+
+                if (now > combined) {
+                    updates.push(
+                        prisma.attendance_sessions.update({
+                            where: { id: session.id },
+                            data: { is_active: false }
+                        })
+                    );
+                }
+            }
+
+            if (updates.length > 0) {
+                await Promise.all(updates);
+            }
+
+            // Fetch active sessions again (after updates)
             const sessions = await prisma.attendance_sessions.findMany({
                 where: {
                     is_active: true,
-                    // Optionally filter by date >= today? 
-                    // For now just active flag as per laravel logic assumption
                 },
                 orderBy: { date: 'desc' },
             });

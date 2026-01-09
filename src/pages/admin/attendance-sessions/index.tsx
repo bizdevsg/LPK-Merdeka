@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import Head from 'next/head';
+import { useRouter } from 'next/router';
 import { AdminLayout } from '@/components/layouts/AdminLayout';
 import { FaEdit, FaTrash, FaPlus, FaSearch, FaCalendarCheck, FaUsers, FaCheckCircle } from 'react-icons/fa';
 import { ConfirmationModal } from '@/components/shared/molecules/ConfirmationModal';
@@ -44,11 +45,7 @@ export default function AttendanceSessionsManagement() {
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
-    // Attendees Modal State
-    const [isAttendeesModalOpen, setIsAttendeesModalOpen] = useState(false);
-    const [selectedSessionTitle, setSelectedSessionTitle] = useState('');
-    const [attendees, setAttendees] = useState<AttendanceRecord[]>([]);
-    const [loadingAttendees, setLoadingAttendees] = useState(false);
+    const router = useRouter();
 
     // Validation State
     const [timeError, setTimeError] = useState('');
@@ -203,26 +200,6 @@ export default function AttendanceSessionsManagement() {
         }
     }
 
-    const viewAttendees = async (sessionId: string, sessionTitle: string) => {
-        setSelectedSessionTitle(sessionTitle);
-        setIsAttendeesModalOpen(true);
-        setLoadingAttendees(true);
-
-        try {
-            const res = await fetch(`/api/admin/attendance-sessions/${sessionId}/records`, {
-                headers: getAuthHeaders()
-            });
-            if (res.ok) {
-                const data = await res.json();
-                setAttendees(data);
-            }
-        } catch (error) {
-            console.error('Failed to fetch attendees', error);
-        } finally {
-            setLoadingAttendees(false);
-        }
-    };
-
     const displayTime = (iso: string) => {
         return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
     };
@@ -273,7 +250,7 @@ export default function AttendanceSessionsManagement() {
                                     <tr key={session.id} className="hover:bg-gray-50 transition">
                                         <td className="px-6 py-4 font-medium text-gray-900">
                                             <button
-                                                onClick={() => viewAttendees(session.id, session.title)}
+                                                onClick={() => router.push(`/admin/attendance-sessions/${session.id}`)}
                                                 className="flex items-center gap-2 hover:text-red-600 transition"
                                             >
                                                 <FaUsers className="text-gray-400" />
@@ -427,82 +404,7 @@ export default function AttendanceSessionsManagement() {
                 </div>
             )}
 
-            {/* Attendees Modal */}
-            {isAttendeesModalOpen && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[80vh] overflow-hidden animate-in fade-in zoom-in duration-200">
-                        <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gradient-to-r from-red-50 to-pink-50">
-                            <div>
-                                <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                                    <FaUsers className="text-red-600" />
-                                    Daftar Kehadiran
-                                </h3>
-                                <p className="text-sm text-gray-600 mt-1">{selectedSessionTitle}</p>
-                            </div>
-                            <button
-                                onClick={() => setIsAttendeesModalOpen(false)}
-                                className="text-gray-400 hover:text-gray-600 text-2xl"
-                            >
-                                &times;
-                            </button>
-                        </div>
-
-                        <div className="p-6 overflow-y-auto max-h-[60vh]">
-                            {loadingAttendees ? (
-                                <div className="text-center py-8 text-gray-500">Loading...</div>
-                            ) : attendees.length === 0 ? (
-                                <div className="text-center py-8">
-                                    <div className="text-gray-400 mb-2">
-                                        <FaUsers size={48} className="mx-auto opacity-50" />
-                                    </div>
-                                    <p className="text-gray-500">Belum ada yang absen</p>
-                                </div>
-                            ) : (
-                                <div className="space-y-3">
-                                    {attendees.map((record, index) => (
-                                        <div
-                                            key={record.id}
-                                            className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-100 hover:bg-gray-100 transition"
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 bg-green-100 text-green-600 rounded-full flex items-center justify-center font-bold">
-                                                    {index + 1}
-                                                </div>
-                                                <div>
-                                                    <p className="font-medium text-gray-900">{record.user.name}</p>
-                                                    <p className="text-sm text-gray-500">{record.user.email}</p>
-                                                </div>
-                                            </div>
-                                            <div className="text-right">
-                                                <div className="flex items-center gap-2 text-green-600 text-sm font-medium">
-                                                    <FaCheckCircle />
-                                                    Hadir
-                                                </div>
-                                                <p className="text-xs text-gray-500 mt-1">
-                                                    {new Date(record.checked_in_at).toLocaleString('id-ID', {
-                                                        hour: '2-digit',
-                                                        minute: '2-digit',
-                                                        day: '2-digit',
-                                                        month: 'short'
-                                                    })}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-
-                            {attendees.length > 0 && (
-                                <div className="mt-6 p-4 bg-blue-50 border border-blue-100 rounded-lg">
-                                    <p className="text-sm text-blue-800">
-                                        <strong>Total Kehadiran:</strong> {attendees.length} orang
-                                    </p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )}
+            {/* Modal removed */}
 
             {/* Confirmation Modal */}
             <ConfirmationModal
