@@ -35,13 +35,16 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => 
         {
             group: 'Landing Page',
             items: [
-                { label: 'Beranda', href: '/admin/cms/home', icon: <FaHome /> },
-                { label: 'Program', href: '/admin/cms/programs', icon: <FaList /> },
-                { label: 'Galeri', href: '/admin/cms/gallery', icon: <FaImages /> },
                 { label: 'Testimoni', href: '/admin/cms/testimonials', icon: <FaStar /> },
-                { label: 'Artikel', href: '/admin/cms/articles', icon: <FaNewspaper /> },
-                { label: 'Bantuan', href: '/admin/cms/faq', icon: <FaQuestionCircle /> },
+                { label: 'FAQ', href: '/admin/cms/faq', icon: <FaQuestionCircle /> },
+                { label: 'Galeri', href: '/admin/cms/gallery', icon: <FaImages /> },
                 { label: 'Pengaturan', href: '/admin/cms/settings', icon: <FaCog /> }
+            ]
+        },
+        {
+            group: 'Konten',
+            items: [
+                { label: 'Artikel', href: '/admin/cms/articles', icon: <FaNewspaper /> }
             ]
         },
         {

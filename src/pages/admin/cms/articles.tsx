@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { AdminLayout } from '@/components/layouts/AdminLayout';
 import { FaEdit, FaTrash, FaPlus, FaNewspaper, FaEye, FaEyeSlash } from 'react-icons/fa';
 import { ConfirmationModal } from '@/components/shared/molecules/ConfirmationModal';
+import { Toast } from '@/components/shared/molecules/Toast';
 
 interface Article {
     id: string;
@@ -34,6 +35,9 @@ export default function CMSArticles() {
 
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+
+    // Toast State
+    const [toast, setToast] = useState({ isOpen: false, message: '', type: 'info' as 'success' | 'error' | 'info' });
 
     const getAuthHeaders = () => {
         const token = localStorage.getItem('token');
@@ -75,11 +79,13 @@ export default function CMSArticles() {
             });
             if (res.ok) {
                 setArticles(articles.filter(a => a.id !== deleteTargetId));
+                setToast({ isOpen: true, message: 'Article deleted successfully', type: 'success' });
             } else {
-                alert('Failed to delete article');
+                const data = await res.json();
+                setToast({ isOpen: true, message: data.message || 'Failed to delete article', type: 'error' });
             }
         } catch (error) {
-            alert('Error deleting article');
+            setToast({ isOpen: true, message: 'Error deleting article', type: 'error' });
         } finally {
             setIsDeleteModalOpen(false);
             setDeleteTargetId(null);
@@ -129,11 +135,13 @@ export default function CMSArticles() {
             if (res.ok) {
                 setIsFormOpen(false);
                 fetchArticles();
+                setToast({ isOpen: true, message: `Article ${formMode === 'create' ? 'created' : 'updated'} successfully`, type: 'success' });
             } else {
-                alert('Operation failed');
+                const data = await res.json();
+                setToast({ isOpen: true, message: data.message || 'Operation failed', type: 'error' });
             }
         } catch (error) {
-            alert('Error submitting form');
+            setToast({ isOpen: true, message: 'Error submitting form', type: 'error' });
         }
     };
 
@@ -183,8 +191,8 @@ export default function CMSArticles() {
                                         <td className="px-6 py-4 text-sm text-gray-500">{article.author || '-'}</td>
                                         <td className="px-6 py-4">
                                             <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${article.is_published
-                                                    ? 'bg-green-100 text-green-700'
-                                                    : 'bg-gray-100 text-gray-600'
+                                                ? 'bg-green-100 text-green-700'
+                                                : 'bg-gray-100 text-gray-600'
                                                 }`}>
                                                 {article.is_published ? <FaEye size={10} /> : <FaEyeSlash size={10} />}
                                                 {article.is_published ? 'Published' : 'Draft'}
@@ -325,6 +333,13 @@ export default function CMSArticles() {
                 message="Yakin ingin menghapus artikel ini?"
                 isDanger={true}
                 confirmText="Hapus"
+            />
+
+            <Toast
+                isOpen={toast.isOpen}
+                message={toast.message}
+                type={toast.type}
+                onClose={() => setToast({ ...toast, isOpen: false })}
             />
         </AdminLayout>
     );

@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { AdminLayout } from '@/components/layouts/AdminLayout';
 import { FaEdit, FaTrash, FaPlus, FaQuestionCircle } from 'react-icons/fa';
 import { ConfirmationModal } from '@/components/shared/molecules/ConfirmationModal';
+import { Toast } from '@/components/shared/molecules/Toast';
 
 interface FAQ {
     id: string; // BigInt serialized
@@ -12,7 +13,10 @@ interface FAQ {
     order: number;
 }
 
+type CategoryType = 'General' | 'Registration';
+
 export default function CMSFAQ() {
+    const [activeCategory, setActiveCategory] = useState<CategoryType>('General');
     const [faqs, setFaqs] = useState<FAQ[]>([]);
     const [loading, setLoading] = useState(true);
     const [isFormOpen, setIsFormOpen] = useState(false);
@@ -23,6 +27,9 @@ export default function CMSFAQ() {
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
+    // Toast State
+    const [toast, setToast] = useState({ isOpen: false, message: '', type: 'info' as 'success' | 'error' | 'info' });
+
     const getAuthHeaders = () => {
         const token = localStorage.getItem('token');
         return {
@@ -31,9 +38,10 @@ export default function CMSFAQ() {
         };
     };
 
-    const fetchFaqs = async () => {
+    const fetchFaqs = async (category: CategoryType) => {
+        setLoading(true);
         try {
-            const res = await fetch('/api/admin/cms/faq', { headers: getAuthHeaders() });
+            const res = await fetch(`/api/admin/cms/faq?category=${category}`, { headers: getAuthHeaders() });
             if (res.ok) {
                 const data = await res.json();
                 setFaqs(data);
@@ -46,8 +54,8 @@ export default function CMSFAQ() {
     };
 
     useEffect(() => {
-        fetchFaqs();
-    }, []);
+        fetchFaqs(activeCategory);
+    }, [activeCategory]);
 
     const handleDeleteClick = (id: string) => {
         setDeleteTargetId(id);
@@ -63,11 +71,13 @@ export default function CMSFAQ() {
             });
             if (res.ok) {
                 setFaqs(faqs.filter(f => f.id !== deleteTargetId));
+                setToast({ isOpen: true, message: 'FAQ deleted successfully', type: 'success' });
             } else {
-                alert('Failed to delete FAQ');
+                const data = await res.json();
+                setToast({ isOpen: true, message: data.message || 'Failed to delete FAQ', type: 'error' });
             }
         } catch (error) {
-            alert('Error deleting FAQ');
+            setToast({ isOpen: true, message: 'Error deleting FAQ', type: 'error' });
         } finally {
             setIsDeleteModalOpen(false);
             setDeleteTargetId(null);
@@ -78,7 +88,7 @@ export default function CMSFAQ() {
         setFormData({
             question: faq.question,
             answer: faq.answer,
-            category: faq.category || 'General',
+            category: faq.category || activeCategory,
             order: faq.order,
             id: faq.id
         });
@@ -87,7 +97,7 @@ export default function CMSFAQ() {
     };
 
     const handleCreate = () => {
-        setFormData({ question: '', answer: '', category: 'General', order: faqs.length + 1, id: '' });
+        setFormData({ question: '', answer: '', category: activeCategory, order: faqs.length + 1, id: '' });
         setFormMode('create');
         setIsFormOpen(true);
     };
@@ -106,13 +116,19 @@ export default function CMSFAQ() {
 
             if (res.ok) {
                 setIsFormOpen(false);
-                fetchFaqs();
+                fetchFaqs(activeCategory);
+                setToast({ isOpen: true, message: `FAQ ${formMode === 'create' ? 'created' : 'updated'} successfully`, type: 'success' });
             } else {
-                alert('Operation failed');
+                const data = await res.json();
+                setToast({ isOpen: true, message: data.message || 'Operation failed', type: 'error' });
             }
         } catch (error) {
-            alert('Error submitting form');
+            setToast({ isOpen: true, message: 'Error submitting form', type: 'error' });
         }
+    };
+
+    const getCategoryLabel = (category: CategoryType) => {
+        return category === 'General' ? 'FAQ Umum (Bantuan)' : 'FAQ Pendaftaran (Program)';
     };
 
     return (
@@ -122,18 +138,44 @@ export default function CMSFAQ() {
             </Head>
 
             <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-                <div className="p-4 border-b border-gray-100 flex justify-between items-center">
-                    <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                        <FaQuestionCircle className="text-red-500" /> FAQ List
-                    </h2>
-                    <button
-                        onClick={handleCreate}
-                        className="bg-red-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-red-700 transition"
-                    >
-                        <FaPlus /> Add FAQ
-                    </button>
+                {/* Header with Tabs */}
+                <div className="border-b border-gray-100">
+                    <div className="p-4 flex justify-between items-center">
+                        <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                            <FaQuestionCircle className="text-red-500" /> Frequently Asked Questions
+                        </h2>
+                        <button
+                            onClick={handleCreate}
+                            className="bg-red-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-red-700 transition"
+                        >
+                            <FaPlus /> Add FAQ
+                        </button>
+                    </div>
+
+                    {/* Category Tabs */}
+                    <div className="flex border-t border-gray-100">
+                        <button
+                            onClick={() => setActiveCategory('General')}
+                            className={`flex-1 px-6 py-3 text-sm font-medium transition-colors ${activeCategory === 'General'
+                                ? 'bg-red-50 text-red-600 border-b-2 border-red-600'
+                                : 'text-gray-600 hover:bg-gray-50'
+                                }`}
+                        >
+                            FAQ Umum (Bantuan)
+                        </button>
+                        <button
+                            onClick={() => setActiveCategory('Registration')}
+                            className={`flex-1 px-6 py-3 text-sm font-medium transition-colors ${activeCategory === 'Registration'
+                                ? 'bg-red-50 text-red-600 border-b-2 border-red-600'
+                                : 'text-gray-600 hover:bg-gray-50'
+                                }`}
+                        >
+                            FAQ Pendaftaran (Program)
+                        </button>
+                    </div>
                 </div>
 
+                {/* Table */}
                 <div className="overflow-x-auto">
                     <table className="w-full text-left">
                         <thead className="bg-gray-50 border-b border-gray-200">
@@ -151,7 +193,9 @@ export default function CMSFAQ() {
                                 </tr>
                             ) : faqs.length === 0 ? (
                                 <tr>
-                                    <td colSpan={4} className="px-6 py-4 text-center text-gray-500">No FAQs found.</td>
+                                    <td colSpan={4} className="px-6 py-4 text-center text-gray-500">
+                                        No FAQs found for {getCategoryLabel(activeCategory)}.
+                                    </td>
                                 </tr>
                             ) : (
                                 faqs.map((faq) => (
@@ -217,12 +261,14 @@ export default function CMSFAQ() {
                             <div className="flex gap-4">
                                 <div className="flex-1">
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                                    <input
-                                        type="text" // Or select
+                                    <select
                                         value={formData.category}
                                         onChange={e => setFormData({ ...formData, category: e.target.value })}
                                         className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 outline-none"
-                                    />
+                                    >
+                                        <option value="General">FAQ Umum (Bantuan)</option>
+                                        <option value="Registration">FAQ Pendaftaran (Program)</option>
+                                    </select>
                                 </div>
                                 <div className="flex-1">
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Order</label>
@@ -263,6 +309,13 @@ export default function CMSFAQ() {
                 message="Yakin ingin menghapus pertanyaan ini?"
                 isDanger={true}
                 confirmText="Hapus"
+            />
+
+            <Toast
+                isOpen={toast.isOpen}
+                message={toast.message}
+                type={toast.type}
+                onClose={() => setToast({ ...toast, isOpen: false })}
             />
         </AdminLayout>
     );

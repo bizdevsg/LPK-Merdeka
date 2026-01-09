@@ -33,80 +33,19 @@ model attendance_sessions {
   attendance_records attendance_records[]
 }
 
-model cache {
-  key        String @id @db.VarChar(255)
-  value      String @db.MediumText
-  expiration Int
-}
 
-model cache_locks {
-  key        String @id @db.VarChar(255)
-  owner      String @db.VarChar(255)
-  expiration Int
-}
 
-model failed_jobs {
-  id         BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
-  uuid       String   @unique(map: "failed_jobs_uuid_unique") @db.VarChar(255)
-  connection String   @db.Text
-  queue      String   @db.Text
-  payload    String   @db.LongText
-  exception  String   @db.LongText
-  failed_at  DateTime @default(now()) @db.Timestamp(0)
-}
 
-model job_batches {
-  id             String  @id @db.VarChar(255)
-  name           String  @db.VarChar(255)
-  total_jobs     Int
-  pending_jobs   Int
-  failed_jobs    Int
-  failed_job_ids String  @db.LongText
-  options        String? @db.MediumText
-  cancelled_at   Int?
-  created_at     Int
-  finished_at    Int?
-}
 
-model jobs {
-  id           BigInt @id @default(autoincrement()) @db.UnsignedBigInt
-  queue        String @db.VarChar(255)
-  payload      String @db.LongText
-  attempts     Int    @db.UnsignedTinyInt
-  reserved_at  Int?   @db.UnsignedInt
-  available_at Int    @db.UnsignedInt
-  created_at   Int    @db.UnsignedInt
 
-  @@index([queue], map: "jobs_queue_index")
-}
 
-model migrations {
-  id        Int    @id @default(autoincrement()) @db.UnsignedInt
-  migration String @db.VarChar(255)
-  batch     Int
-}
 
-model password_reset_tokens {
-  email      String    @id @db.VarChar(255)
-  token      String    @db.VarChar(255)
-  created_at DateTime? @db.Timestamp(0)
-}
 
-model personal_access_tokens {
-  id             BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
-  tokenable_type String    @db.VarChar(255)
-  tokenable_id   BigInt    @db.UnsignedBigInt
-  name           String    @db.Text
-  token          String    @unique(map: "personal_access_tokens_token_unique") @db.VarChar(64)
-  abilities      String?   @db.Text
-  last_used_at   DateTime? @db.Timestamp(0)
-  expires_at     DateTime? @db.Timestamp(0)
-  created_at     DateTime? @db.Timestamp(0)
-  updated_at     DateTime? @db.Timestamp(0)
 
-  @@index([expires_at], map: "personal_access_tokens_expires_at_index")
-  @@index([tokenable_type, tokenable_id], map: "personal_access_tokens_tokenable_type_tokenable_id_index")
-}
+
+
+
+
 
 model sessions {
   id            String  @id @db.VarChar(255)
@@ -133,27 +72,9 @@ model users {
   attendance_records attendance_records[]
 }
 
-model cms_hero {
-  id        BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
-  title     String   @db.VarChar(255)
-  subtitle  String   @db.Text
-  image_url String   @db.VarChar(255)
-  cta_text  String?  @db.VarChar(50)
-  cta_link  String?  @db.VarChar(255)
-  is_active Boolean  @default(true)
-  created_at DateTime? @db.Timestamp(0) @default(now())
-  updated_at DateTime? @db.Timestamp(0) @updatedAt
-}
 
-model cms_programs {
-  id          BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
-  title       String   @db.VarChar(255)
-  description String   @db.Text
-  image_url   String   @db.VarChar(255)
-  order       Int      @default(0)
-  created_at  DateTime? @db.Timestamp(0) @default(now())
-  updated_at  DateTime? @db.Timestamp(0) @updatedAt
-}
+
+
 
 model cms_gallery {
   id        BigInt   @id @default(autoincrement()) @db.UnsignedBigInt

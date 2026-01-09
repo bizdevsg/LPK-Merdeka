@@ -17,7 +17,7 @@ export default function AdminDashboard() {
     useEffect(() => {
         if (!isAuthenticated) {
             router.push('/auth/login');
-        } else if (user && user.role !== 'admin') {
+        } else if (user && user.role !== 'admin' && user.role !== 'superAdmin') {
             router.push('/dashboard');
         }
     }, [isAuthenticated, user, router]);
@@ -45,12 +45,12 @@ export default function AdminDashboard() {
             }
         };
 
-        if (isAuthenticated && user?.role === 'admin') {
+        if (isAuthenticated && (user?.role === 'admin' || user?.role === 'superAdmin')) {
             fetchStats();
         }
     }, [isAuthenticated, user]);
 
-    if (!isAuthenticated || (user && user.role !== 'admin')) {
+    if (!isAuthenticated || (user && user.role !== 'admin' && user.role !== 'superAdmin')) {
         return null; // Or loading spinner
     }
 

@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { AdminLayout } from '@/components/layouts/AdminLayout';
 import { FaEdit, FaTrash, FaPlus, FaImages, FaImage, FaVideo } from 'react-icons/fa';
 import { ConfirmationModal } from '@/components/shared/molecules/ConfirmationModal';
+import { Toast } from '@/components/shared/molecules/Toast';
 
 interface GalleryItem {
     id: string;
@@ -22,6 +23,9 @@ export default function CMSGallery() {
     // Delete Modal State
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+
+    // Toast State
+    const [toast, setToast] = useState({ isOpen: false, message: '', type: 'info' as 'success' | 'error' | 'info' });
 
     const getAuthHeaders = () => {
         const token = localStorage.getItem('token');
@@ -63,11 +67,13 @@ export default function CMSGallery() {
             });
             if (res.ok) {
                 setItems(items.filter(i => i.id !== deleteTargetId));
+                setToast({ isOpen: true, message: 'Gallery item deleted successfully', type: 'success' });
             } else {
-                alert('Failed to delete item');
+                const data = await res.json();
+                setToast({ isOpen: true, message: data.message || 'Failed to delete item', type: 'error' });
             }
         } catch (error) {
-            alert('Error deleting item');
+            setToast({ isOpen: true, message: 'Error deleting item', type: 'error' });
         } finally {
             setIsDeleteModalOpen(false);
             setDeleteTargetId(null);
@@ -107,11 +113,13 @@ export default function CMSGallery() {
             if (res.ok) {
                 setIsFormOpen(false);
                 fetchGallery();
+                setToast({ isOpen: true, message: `Gallery item ${formMode === 'create' ? 'created' : 'updated'} successfully`, type: 'success' });
             } else {
-                alert('Operation failed');
+                const data = await res.json();
+                setToast({ isOpen: true, message: data.message || 'Operation failed', type: 'error' });
             }
         } catch (error) {
-            alert('Error submitting form');
+            setToast({ isOpen: true, message: 'Error submitting form', type: 'error' });
         }
     };
 
@@ -250,6 +258,13 @@ export default function CMSGallery() {
                 message="Yakin ingin menghapus gambar ini?"
                 isDanger={true}
                 confirmText="Hapus"
+            />
+
+            <Toast
+                isOpen={toast.isOpen}
+                message={toast.message}
+                type={toast.type}
+                onClose={() => setToast({ ...toast, isOpen: false })}
             />
         </AdminLayout>
     );

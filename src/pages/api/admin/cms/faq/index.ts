@@ -14,7 +14,12 @@ const serializeBigInt = (obj: any) => {
 
 async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
     if (req.method === 'GET') {
-        const faqs = await prisma.cms_faq.findMany({ orderBy: { order: 'asc' } });
+        const { category } = req.query;
+        const where = category ? { category: category as string } : {};
+        const faqs = await prisma.cms_faq.findMany({
+            where,
+            orderBy: { order: 'asc' }
+        });
         return res.json(serializeBigInt(faqs));
     }
 
