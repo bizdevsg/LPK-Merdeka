@@ -181,9 +181,8 @@ export default function AdminsManagement() {
                         <thead className="bg-gray-50 border-b border-gray-200">
                             <tr>
                                 <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Name</th>
-                                <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Email</th>
                                 <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Role</th>
-                                <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Created</th>
+                                <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Joined</th>
                                 {isSuperAdmin && (
                                     <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase text-right">Actions</th>
                                 )}
@@ -203,14 +202,22 @@ export default function AdminsManagement() {
                             ) : (
                                 filteredAdmins.map((admin) => (
                                     <tr key={admin.id} className="hover:bg-gray-50 transition">
-                                        <td className="px-6 py-4 font-medium text-gray-900">{admin.name}</td>
-                                        <td className="px-6 py-4 text-sm text-gray-500">{admin.email}</td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">
+                                                    {admin.role === 'superAdmin' ? <FaCrown size={12} className="text-purple-600" /> : <FaUserShield size={12} />}
+                                                </div>
+                                                <div>
+                                                    <div className="font-medium text-gray-900">{admin.name}</div>
+                                                    <div className="text-xs text-gray-500">{admin.email}</div>
+                                                </div>
+                                            </div>
+                                        </td>
                                         <td className="px-6 py-4">
                                             <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${admin.role === 'superAdmin'
                                                 ? 'bg-purple-100 text-purple-700'
                                                 : 'bg-blue-100 text-blue-700'
                                                 }`}>
-                                                {admin.role === 'superAdmin' ? <FaCrown size={10} /> : <FaUserShield size={10} />}
                                                 {admin.role === 'superAdmin' ? 'Super Admin' : 'Admin'}
                                             </span>
                                         </td>

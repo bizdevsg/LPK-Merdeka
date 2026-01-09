@@ -198,24 +198,18 @@ export default function UsersManagement() {
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex items-center justify-end gap-2">
-                                                {user.role === 'admin' || user.role === 'superAdmin' ? (
-                                                    <span className="text-xs text-gray-400 italic">Manage via Admins page</span>
-                                                ) : (
-                                                    <>
-                                                        <button
-                                                            onClick={() => handleEdit(user)}
-                                                            className="p-2 hover:bg-gray-100 rounded-lg text-blue-600 transition"
-                                                        >
-                                                            <FaEdit />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleDeleteClick(user.id)}
-                                                            className="p-2 hover:bg-gray-100 rounded-lg text-red-600 transition"
-                                                        >
-                                                            <FaTrash />
-                                                        </button>
-                                                    </>
-                                                )}
+                                                <button
+                                                    onClick={() => handleEdit(user)}
+                                                    className="p-2 hover:bg-gray-100 rounded-lg text-blue-600 transition"
+                                                >
+                                                    <FaEdit />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeleteClick(user.id)}
+                                                    className="p-2 hover:bg-gray-100 rounded-lg text-red-600 transition"
+                                                >
+                                                    <FaTrash />
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>

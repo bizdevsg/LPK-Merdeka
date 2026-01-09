@@ -7,6 +7,7 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
     if (req.method === 'GET') {
         try {
             const users = await prisma.users.findMany({
+                where: { role: 'user' },
                 orderBy: { created_at: 'desc' },
                 select: {
                     id: true,

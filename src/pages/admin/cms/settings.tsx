@@ -70,7 +70,7 @@ export default function CMSSettings() {
                 <title>Settings | Admin</title>
             </Head>
 
-            <div className="max-w-4xl mx-auto">
+            <div className="w-full">
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                     <div className="p-6 border-b border-gray-100 flex items-center gap-3">
                         <div className="p-2 bg-gray-100 rounded-lg text-gray-600"><FaCog /></div>

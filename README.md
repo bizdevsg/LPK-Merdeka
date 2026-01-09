@@ -51,7 +51,6 @@ This project is built using the following technologies:
 
 The source code is organized using a **section-based component structure** for better maintainability and scalability:
 
-```bash
 src/
 ├── components/
 │   ├── shared/          # Reusable components across all sections
@@ -59,6 +58,7 @@ src/
 │   │   ├── molecules/   # Combined atoms (FormField, LineHeading, etc.)
 │   │   ├── organisms/   # Complex components (Navbar, Footer, SplashScreen)
 │   │   └── Layout.tsx   # Main layout wrapper
+│   ├── layouts/         # Layout components (e.g., AdminLayout)
 │   ├── home/            # Home page specific components
 │   ├── about/           # About page components
 │   ├── program/         # Program page components
@@ -66,13 +66,14 @@ src/
 │   ├── contact/         # Contact page components
 │   ├── gallery/         # Gallery components
 │   ├── leaderboard/     # Leaderboard components
-│   ├── dashboard/       # User dashboard components
-│   └── admin/           # Admin dashboard components
+│   └── dashboard/       # User dashboard components
 ├── pages/               # Next.js page routing
 │   ├── api/             # API Routes
 │   │   ├── auth/        # Authentication API
 │   │   ├── admin/       # Admin API endpoints
-│   │   └── cms/         # CMS API endpoints
+│   │   ├── cms/         # Public CMS API endpoints
+│   │   ├── attendance-sessions/ # Attendance API
+│   │   └── user.ts      # User profile API
 │   ├── auth/            # Login/Register pages
 │   ├── admin/           # Admin Dashboard pages
 │   ├── dashboard.tsx    # User Dashboard page
