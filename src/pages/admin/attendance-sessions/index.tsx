@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { AdminLayout } from '@/components/layouts/AdminLayout';
-import { FaEdit, FaTrash, FaPlus, FaSearch, FaCalendarCheck, FaUsers, FaCheckCircle } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaPlus, FaUsers } from 'react-icons/fa';
 import { ConfirmationModal } from '@/components/shared/molecules/ConfirmationModal';
 import { useSearch } from '@/context/SearchContext';
 
@@ -12,18 +12,8 @@ interface Session {
     date: string;
     start_time: string;
     end_time: string;
-    is_active: boolean;
+    isActive: boolean;
     created_at: string;
-}
-
-interface AttendanceRecord {
-    id: string;
-    checked_in_at: string;
-    user: {
-        id: string;
-        name: string;
-        email: string;
-    };
 }
 
 export default function AttendanceSessionsManagement() {
@@ -36,7 +26,7 @@ export default function AttendanceSessionsManagement() {
         date: '',
         start_time: '',
         end_time: '',
-        is_active: true,
+        isActive: true,
         id: ''
     });
     const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
@@ -122,7 +112,7 @@ export default function AttendanceSessionsManagement() {
             date: formatDate(session.date),
             start_time: formatTime(session.start_time),
             end_time: formatTime(session.end_time),
-            is_active: session.is_active,
+            isActive: session.isActive,
             id: session.id
         });
         setFormMode('edit');
@@ -136,7 +126,7 @@ export default function AttendanceSessionsManagement() {
             date: today,
             start_time: '09:00',
             end_time: '17:00',
-            is_active: true,
+            isActive: true,
             id: ''
         });
         setFormMode('create');
@@ -161,11 +151,16 @@ export default function AttendanceSessionsManagement() {
         const url = formMode === 'create' ? '/api/admin/attendance-sessions' : `/api/admin/attendance-sessions/${formData.id}`;
         const method = formMode === 'create' ? 'POST' : 'PUT';
 
+        const payload = {
+            ...formData,
+            is_active: formData.isActive
+        };
+
         try {
             const res = await fetch(url, {
                 method,
                 headers: getAuthHeaders(),
-                body: JSON.stringify(formData)
+                body: JSON.stringify(payload)
             });
 
             if (res.ok) {
@@ -186,13 +181,13 @@ export default function AttendanceSessionsManagement() {
             const res = await fetch(`/api/admin/attendance-sessions/${session.id}`, {
                 method: 'PUT',
                 headers: getAuthHeaders(),
-                body: JSON.stringify({ is_active: !session.is_active })
+                body: JSON.stringify({ is_active: !session.isActive })
             });
 
             if (res.ok) {
                 // Update local state immediately for better UX
                 setSessions(sessions.map(s =>
-                    s.id === session.id ? { ...s, is_active: !s.is_active } : s
+                    s.id === session.id ? { ...s, isActive: !s.isActive } : s
                 ));
             }
         } catch (error) {
@@ -266,11 +261,11 @@ export default function AttendanceSessionsManagement() {
                                         <td className="px-6 py-4">
                                             <button
                                                 onClick={() => toggleStatus(session)}
-                                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${session.is_active ? 'bg-green-500' : 'bg-gray-300'
+                                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${session.isActive ? 'bg-green-500' : 'bg-gray-300'
                                                     }`}
-                                                title={session.is_active ? 'Click to deactivate' : 'Click to activate'}
+                                                title={session.isActive ? 'Click to deactivate' : 'Click to activate'}
                                             >
-                                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${session.is_active ? 'translate-x-6' : 'translate-x-1'
+                                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${session.isActive ? 'translate-x-6' : 'translate-x-1'
                                                     }`} />
                                             </button>
                                         </td>
@@ -375,11 +370,11 @@ export default function AttendanceSessionsManagement() {
                                 <label className="block text-sm font-medium text-gray-700">Active Status</label>
                                 <button
                                     type="button"
-                                    onClick={() => setFormData({ ...formData, is_active: !formData.is_active })}
-                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${formData.is_active ? 'bg-green-500' : 'bg-gray-300'
+                                    onClick={() => setFormData({ ...formData, isActive: !formData.isActive })}
+                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${formData.isActive ? 'bg-green-500' : 'bg-gray-300'
                                         }`}
                                 >
-                                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${formData.is_active ? 'translate-x-6' : 'translate-x-1'
+                                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${formData.isActive ? 'translate-x-6' : 'translate-x-1'
                                         }`} />
                                 </button>
                             </div>
@@ -404,9 +399,6 @@ export default function AttendanceSessionsManagement() {
                 </div>
             )}
 
-            {/* Modal removed */}
-
-            {/* Confirmation Modal */}
             <ConfirmationModal
                 isOpen={isDeleteModalOpen}
                 onClose={() => setIsDeleteModalOpen(false)}

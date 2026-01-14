@@ -32,15 +32,18 @@ export default function DashboardPage() {
 
 
     useEffect(() => {
-        // If query param 'registered' is present, we might want to show a toast (handled elsewhere)
-
         // Auth check relies on useAuth() which is cookie-based via better-auth
         if (!loading && !isAuthenticated) {
             router.push('/auth/login');
         } else if (isAuthenticated) {
-            setLoading(false);
+            // Redirect admins to admin dashboard if they land here
+            if (user?.role === 'admin' || user?.role === 'superAdmin') {
+                router.push('/admin/dashboard');
+            } else {
+                setLoading(false);
+            }
         }
-    }, [isAuthenticated, loading, router]);
+    }, [isAuthenticated, loading, router, user]);
 
     if (loading) {
         return (

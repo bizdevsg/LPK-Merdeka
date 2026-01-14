@@ -67,6 +67,7 @@ const GalleryItem: React.FC<GalleryItemProps> = ({ type, category, title, date, 
                         src={displayImage}
                         alt={title}
                         fill
+                        unoptimized
                         className={`object-cover transform group-hover:scale-105 transition-transform duration-700 ease-out ${type === 'video' && displayImage === image ? 'opacity-50' : ''}`} // Dim if raw video url
                         sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                         onError={(e) => {
