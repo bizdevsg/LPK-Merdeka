@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { AdminLayout } from "@/components/layouts/AdminLayout";
 import { useAuth } from "@/context/AuthContext";
 import Head from "next/head";
-import { FaUser, FaLock, FaEnvelope, FaSave } from "react-icons/fa";
+import { FaUser, FaLock, FaEnvelope, FaSave, FaEye, FaEyeSlash } from "react-icons/fa";
 import { authClient } from "@/lib/auth-client";
 
 const ProfilePage = () => {
@@ -11,6 +11,8 @@ const ProfilePage = () => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
@@ -54,6 +56,11 @@ const ProfilePage = () => {
             // Clear password fields on success
             setPassword('');
             setConfirmPassword('');
+
+            // Reload to reflect changes if session context doesn't update automatically
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
         } catch (error: any) {
             const msg = error?.message || error?.body?.message || 'Failed to update profile.';
             if (msg.includes("current password")) {
@@ -139,12 +146,19 @@ const ProfilePage = () => {
                                                 <FaLock className="text-gray-400" />
                                             </div>
                                             <input
-                                                type="password"
+                                                type={showPassword ? "text" : "password"}
                                                 value={password}
                                                 onChange={(e) => setPassword(e.target.value)}
-                                                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-red-100 focus:border-red-500 outline-none transition-all"
+                                                className="w-full pl-10 pr-10 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-red-100 focus:border-red-500 outline-none transition-all"
                                                 placeholder="Leave blank to keep current"
                                             />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowPassword(!showPassword)}
+                                                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none"
+                                            >
+                                                {showPassword ? <FaEyeSlash /> : <FaEye />}
+                                            </button>
                                         </div>
                                     </div>
 
@@ -155,12 +169,19 @@ const ProfilePage = () => {
                                                 <FaLock className="text-gray-400" />
                                             </div>
                                             <input
-                                                type="password"
+                                                type={showConfirmPassword ? "text" : "password"}
                                                 value={confirmPassword}
                                                 onChange={(e) => setConfirmPassword(e.target.value)}
-                                                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-red-100 focus:border-red-500 outline-none transition-all"
+                                                className="w-full pl-10 pr-10 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-red-100 focus:border-red-500 outline-none transition-all"
                                                 placeholder="Confirm new password"
                                             />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none"
+                                            >
+                                                {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
+                                            </button>
                                         </div>
                                     </div>
                                 </div>

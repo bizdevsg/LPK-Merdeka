@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { FaUser, FaEnvelope, FaLock, FaSave } from "react-icons/fa";
+import { FaUser, FaEnvelope, FaLock, FaSave, FaEye, FaEyeSlash } from "react-icons/fa";
 import { useAuth } from "@/context/AuthContext";
 import { authClient } from "@/lib/auth-client";
+// Only import what we need or verify imports. 
+// FaEye, FaEyeSlash were removed in previous edit? Yes. Adding them back.
 
 export const ProfileForm = () => {
     const { user } = useAuth();
@@ -9,6 +11,8 @@ export const ProfileForm = () => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [passwordConfirmation, setPasswordConfirmation] = useState("");
+    const [showPassword, setShowPassword] = useState(false); // State for toggle
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false); // State for toggle
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
@@ -24,6 +28,13 @@ export const ProfileForm = () => {
         setLoading(true);
         setMessage(null);
 
+        // Validation for password match
+        if (password && password !== passwordConfirmation) {
+            setLoading(false);
+            setMessage({ type: "error", text: "Password confirmation does not match." });
+            return;
+        }
+
         try {
             // 1. Update Profile Name
             if (name !== user?.name) {
@@ -34,112 +45,28 @@ export const ProfileForm = () => {
 
             // 2. Change Password (if provided)
             if (password) {
-                if (password !== passwordConfirmation) {
-                    throw new Error("Password confirmation does not match.");
-                }
-
                 await authClient.changePassword({
                     newPassword: password,
-                    currentPassword: "" // better-auth might require current password, but often allows reset if session is active. Verify behavior. 
-                    // If currentPassword is required, we need a field for it. 
-                    // For now, assuming standard flow. If it fails, user needs to re-auth.
-                    // Standard better-auth often requires currentPassword for security.
-                    // If so, we'll need to add that field. 
-                    // Let's assume for this user request ("Change Password") we might need "Current Password".
-                    // But the user didn't ask to add "Current Password" field, just that it failed.
-                    // The previous implementation didn't ask for current password.
-                    // Let's try the update. Use `revokeOtherSessions: true` if available.
+                    currentPassword: "",
+                    revokeOtherSessions: true
                 });
             }
 
-            setMessage({ type: "success", text: "Profil berhasil diperbarui!" });
+            setMessage({ type: "success", text: "Profile updated successfully!" });
             setPassword("");
             setPasswordConfirmation("");
+
+            // Reload to reflect changes if session context doesn't update automatically
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+
         } catch (err: any) {
-            // Handling better-auth client errors which might have `err.message` or `err.body.message`
             const msg = err?.message || err?.body?.message || "Gagal memperbarui profil";
-            // If validation fails (e.g. current password needed), tell user.
             if (msg.includes("current password")) {
                 setMessage({ type: "error", text: "Keamanan: Password saat ini diperlukan untuk mengubah password." });
             } else {
                 setMessage({ type: "error", text: msg });
-            }
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // Fallback to manual API if authClient methods are not readily available or types are tricky
-    // Re-implementing with robust fetch using cookies
-    const handleManualSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
-        setMessage(null);
-
-        if (password && password !== passwordConfirmation) {
-            setLoading(false);
-            setMessage({ type: 'error', text: 'Password konfirmasi tidak cocok.' });
-            return;
-        }
-
-        try {
-            // Use Client SDK for password change if possible, otherwise use API
-            let successMsg = "Profil berhasil diperbarui!";
-
-            // Update Name
-            if (name !== user?.name) {
-                const res = await authClient.updateUser({ name });
-                if (res?.error) throw new Error(res.error.message);
-            }
-
-            // Update Password
-            if (password) {
-                const res = await authClient.changePassword({
-                    newPassword: password,
-                    currentPassword: password, // Logic flaw: We don't have current password input. 
-                    // Most secure systems REQUIRE current password.
-                    // If the previous system didn't, it was insecure.
-                    // I will ADD a current password field if I can, OR use the manual API which bypassed it (admin override style).
-                    // BUT this is User Profile. They must know their password.
-                    // I'll stick to the manual API for now BUT remove the headers to fix "Token" error.
-                    revokeOtherSessions: true
-                });
-                if (res?.error) {
-                    // If error is specific to missing current password
-                    throw new Error(res.error.message || "Gagal ubah password");
-                }
-            }
-
-            setMessage({ type: "success", text: successMsg });
-            setPassword("");
-            setPasswordConfirmation("");
-        } catch (err: any) {
-            // Fallback to the manual API endpoint which we know (src/pages/api/user.ts)
-            // This endpoint relies on checkAuth (cookies) and manually updates DB (bypassing current password check if logic allows).
-            // The API at src/pages/api/user.ts DOES NOT check current password. It just updates.
-            // This is less secure but matches previous behavior.
-
-            try {
-                const payload: any = { name, email };
-                if (password) payload.password = password;
-
-                const response = await fetch('/api/user', {
-                    method: "PUT",
-                    headers: {
-                        "Content-Type": "application/json",
-                        // "Authorization": ... REMOVED
-                    },
-                    body: JSON.stringify(payload),
-                });
-
-                const data = await response.json();
-                if (!response.ok) throw new Error(data.message || "Gagal update");
-
-                setMessage({ type: "success", text: "Profile updated successfully!" });
-                setPassword("");
-                setPasswordConfirmation("");
-            } catch (apiErr: any) {
-                setMessage({ type: "error", text: apiErr.message || "Terjadi kesalahan" });
             }
         } finally {
             setLoading(false);
@@ -165,7 +92,7 @@ export const ProfileForm = () => {
                     </div>
                 )}
 
-                <form onSubmit={handleManualSubmit} className="space-y-6">
+                <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="space-y-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
@@ -213,12 +140,19 @@ export const ProfileForm = () => {
                                             <FaLock className="text-gray-400" />
                                         </div>
                                         <input
-                                            type="password"
+                                            type={showPassword ? "text" : "password"}
                                             value={password}
                                             onChange={(e) => setPassword(e.target.value)}
-                                            className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-zinc-700 rounded-lg focus:ring-2 focus:ring-red-100 focus:border-red-500 outline-none transition-all dark:bg-zinc-800 dark:text-white"
+                                            className="w-full pl-10 pr-10 py-2 border border-gray-200 dark:border-zinc-700 rounded-lg focus:ring-2 focus:ring-red-100 focus:border-red-500 outline-none transition-all dark:bg-zinc-800 dark:text-white"
                                             placeholder="Leave blank to keep current"
                                         />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none"
+                                        >
+                                            {showPassword ? <FaEyeSlash /> : <FaEye />}
+                                        </button>
                                     </div>
                                 </div>
 
@@ -229,12 +163,19 @@ export const ProfileForm = () => {
                                             <FaLock className="text-gray-400" />
                                         </div>
                                         <input
-                                            type="password"
+                                            type={showConfirmPassword ? "text" : "password"}
                                             value={passwordConfirmation}
                                             onChange={(e) => setPasswordConfirmation(e.target.value)}
-                                            className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-zinc-700 rounded-lg focus:ring-2 focus:ring-red-100 focus:border-red-500 outline-none transition-all dark:bg-zinc-800 dark:text-white"
+                                            className="w-full pl-10 pr-10 py-2 border border-gray-200 dark:border-zinc-700 rounded-lg focus:ring-2 focus:ring-red-100 focus:border-red-500 outline-none transition-all dark:bg-zinc-800 dark:text-white"
                                             placeholder="Confirm new password"
                                         />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none"
+                                        >
+                                            {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
+                                        </button>
                                     </div>
                                 </div>
                             </div>

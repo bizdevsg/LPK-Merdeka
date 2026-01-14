@@ -1,10 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma';
-import jwt from 'jsonwebtoken';
+import { checkAuth, AuthenticatedRequest } from '@/lib/auth';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'lpk-merdeka-secret-key-123';
-
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
     if (req.method !== 'POST') {
         return res.status(405).json({ message: 'Method not allowed' });
     }
@@ -16,23 +14,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const sessionId = BigInt(id);
-
-    // 1. Auth Check
-    const authHeader = req.headers.authorization;
-    if (!authHeader) return res.status(401).json({ message: 'Unauthorized' });
-
-    const token = authHeader.split(' ')[1];
-    let userId;
+    const userId = req.user!.id; // Verified by checkAuth
 
     try {
-        const decoded = jwt.verify(token, JWT_SECRET) as any;
-        userId = decoded.userId; // Now a String UUID
-    } catch (e) {
-        return res.status(401).json({ message: 'Invalid token' });
-    }
-
-    try {
-        // 2. Check if session exists and is active
+        // 1. Check if session exists and is active
         const session = await prisma.attendance_sessions.findUnique({
             where: { id: sessionId }
         });
@@ -40,7 +25,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             return res.status(400).json({ message: 'Sesi tidak tersedia' });
         }
 
-        // 3. Check duplicate
+        // 2. Check duplicate
         const existing = await prisma.attendance_records.findFirst({
             where: {
                 userId: userId,
@@ -52,7 +37,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             return res.status(400).json({ message: 'Anda sudah absen di sesi ini' });
         }
 
-        // 4. Create Record
+        // 3. Create Record
         const record = await prisma.attendance_records.create({
             data: {
                 userId: userId,
@@ -65,7 +50,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         return res.status(200).json({
             message: 'Berhasil Check-in!',
-            check_in_time: record.checkInTime.toISOString() // Client expects "check_in_time" field
+            check_in_time: record.checkInTime.toISOString()
         });
 
     } catch (error) {
@@ -73,3 +58,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(500).json({ message: 'Terjadi kesalahan sistem' });
     }
 }
+
+export default checkAuth(handler as any);
