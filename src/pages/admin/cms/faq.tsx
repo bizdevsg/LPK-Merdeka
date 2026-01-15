@@ -1,10 +1,27 @@
 import React, { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { AdminLayout } from '@/components/layouts/AdminLayout';
-import { FaEdit, FaTrash, FaPlus, FaQuestionCircle } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaPlus, FaQuestionCircle, FaGripVertical } from 'react-icons/fa';
 import { ConfirmationModal } from '@/components/shared/molecules/ConfirmationModal';
 import { Toast } from '@/components/shared/molecules/Toast';
 import { useSearch } from '@/context/SearchContext';
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    DragEndEvent,
+} from '@dnd-kit/core';
+import {
+    arrayMove,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    useSortable,
+    verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface FAQ {
     id: string; // BigInt serialized
@@ -15,6 +32,77 @@ interface FAQ {
 }
 
 type CategoryType = 'General' | 'Registration';
+
+// Sortable FAQ Item Component
+const SortableFAQItem = ({
+    faq,
+    onEdit,
+    onDelete
+}: {
+    faq: FAQ;
+    onEdit: (faq: FAQ) => void;
+    onDelete: (id: string) => void;
+}) => {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({ id: faq.id });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+        zIndex: isDragging ? 1000 : 1,
+    };
+
+    return (
+        <div
+            ref={setNodeRef}
+            style={style}
+            className={`bg-white border border-gray-200 rounded-xl p-4 flex items-start gap-4 ${isDragging ? 'shadow-lg' : 'shadow-sm'}`}
+        >
+            {/* Drag Handle */}
+            <div
+                {...attributes}
+                {...listeners}
+                className="cursor-grab active:cursor-grabbing p-2 text-gray-400 hover:text-gray-600 mt-1"
+            >
+                <FaGripVertical />
+            </div>
+
+            {/* Order Badge */}
+            <div className="w-8 h-8 bg-red-100 text-red-600 rounded-lg flex items-center justify-center font-bold text-sm flex-shrink-0">
+                {faq.order}
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 min-w-0">
+                <h3 className="font-semibold text-gray-900 mb-1">{faq.question}</h3>
+                <p className="text-sm text-gray-500 line-clamp-2">{faq.answer}</p>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+                <button
+                    onClick={() => onEdit(faq)}
+                    className="p-2 hover:bg-gray-100 rounded-lg text-blue-600 transition"
+                >
+                    <FaEdit />
+                </button>
+                <button
+                    onClick={() => onDelete(faq.id)}
+                    className="p-2 hover:bg-gray-100 rounded-lg text-red-600 transition"
+                >
+                    <FaTrash />
+                </button>
+            </div>
+        </div>
+    );
+};
 
 export default function CMSFAQ() {
     const [activeCategory, setActiveCategory] = useState<CategoryType>('General');
@@ -33,6 +121,14 @@ export default function CMSFAQ() {
     // Toast State
     const [toast, setToast] = useState({ isOpen: false, message: '', type: 'info' as 'success' | 'error' | 'info' });
 
+    // DnD Sensors
+    const sensors = useSensors(
+        useSensor(PointerSensor),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        })
+    );
+
     const getAuthHeaders = () => {
         const token = localStorage.getItem('token');
         return {
@@ -47,6 +143,8 @@ export default function CMSFAQ() {
             const res = await fetch(`/api/admin/cms/faq?category=${category}`, { headers: getAuthHeaders() });
             if (res.ok) {
                 const data = await res.json();
+                // Sort by order
+                data.sort((a: FAQ, b: FAQ) => a.order - b.order);
                 setFaqs(data);
             }
         } catch (error) {
@@ -59,6 +157,48 @@ export default function CMSFAQ() {
     useEffect(() => {
         fetchFaqs(activeCategory);
     }, [activeCategory]);
+
+    const handleDragEnd = async (event: DragEndEvent) => {
+        const { active, over } = event;
+
+        if (over && active.id !== over.id) {
+            const oldIndex = faqs.findIndex((faq) => faq.id === active.id);
+            const newIndex = faqs.findIndex((faq) => faq.id === over.id);
+
+            const newFaqs = arrayMove(faqs, oldIndex, newIndex);
+
+            // Update order numbers
+            const updatedFaqs = newFaqs.map((faq, index) => ({
+                ...faq,
+                order: index + 1
+            }));
+
+            setFaqs(updatedFaqs);
+
+            // Save new order to database
+            try {
+                const res = await fetch('/api/admin/cms/faq/reorder', {
+                    method: 'PUT',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({
+                        category: activeCategory,
+                        items: updatedFaqs.map(faq => ({ id: faq.id, order: faq.order }))
+                    })
+                });
+
+                if (res.ok) {
+                    setToast({ isOpen: true, message: 'Order updated successfully', type: 'success' });
+                } else {
+                    // Revert on failure
+                    fetchFaqs(activeCategory);
+                    setToast({ isOpen: true, message: 'Failed to update order', type: 'error' });
+                }
+            } catch (error) {
+                fetchFaqs(activeCategory);
+                setToast({ isOpen: true, message: 'Error updating order', type: 'error' });
+            }
+        }
+    };
 
     const handleDeleteClick = (id: string) => {
         setDeleteTargetId(id);
@@ -189,55 +329,44 @@ export default function CMSFAQ() {
                     </div>
                 </div>
 
-                {/* Table */}
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead className="bg-gray-50 border-b border-gray-200">
-                            <tr>
-                                <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Question</th>
-                                <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Answer</th>
-                                <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Order</th>
-                                <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100">
-                            {loading ? (
-                                <tr>
-                                    <td colSpan={4} className="px-6 py-4 text-center text-gray-500">Loading...</td>
-                                </tr>
-                            ) : filteredFaqs.length === 0 ? (
-                                <tr>
-                                    <td colSpan={4} className="px-6 py-4 text-center text-gray-500">
-                                        {searchQuery ? `No FAQs found matching "${searchQuery}"` : `No FAQs found for ${getCategoryLabel(activeCategory)}.`}
-                                    </td>
-                                </tr>
-                            ) : (
-                                filteredFaqs.map((faq) => (
-                                    <tr key={faq.id} className="hover:bg-gray-50 transition">
-                                        <td className="px-6 py-4 font-medium text-gray-900 max-w-xs">{faq.question}</td>
-                                        <td className="px-6 py-4 text-sm text-gray-500 max-w-sm truncate">{faq.answer}</td>
-                                        <td className="px-6 py-4 text-sm text-gray-500">{faq.order}</td>
-                                        <td className="px-6 py-4 text-right">
-                                            <div className="flex items-center justify-end gap-2">
-                                                <button
-                                                    onClick={() => handleEdit(faq)}
-                                                    className="p-2 hover:bg-gray-100 rounded-lg text-blue-600 transition"
-                                                >
-                                                    <FaEdit />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDeleteClick(faq.id)}
-                                                    className="p-2 hover:bg-gray-100 rounded-lg text-red-600 transition"
-                                                >
-                                                    <FaTrash />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
+                {/* Drag and Drop Hint */}
+                <div className="px-6 py-3 bg-blue-50 border-b border-blue-100">
+                    <p className="text-sm text-blue-600 flex items-center gap-2">
+                        <FaGripVertical /> Drag and drop items to reorder. Changes are saved automatically.
+                    </p>
+                </div>
+
+                {/* FAQ List */}
+                <div className="p-6">
+                    {loading ? (
+                        <div className="text-center py-8 text-gray-500">Loading...</div>
+                    ) : filteredFaqs.length === 0 ? (
+                        <div className="text-center py-8 text-gray-500">
+                            {searchQuery ? `No FAQs found matching "${searchQuery}"` : `No FAQs found for ${getCategoryLabel(activeCategory)}.`}
+                        </div>
+                    ) : (
+                        <DndContext
+                            sensors={sensors}
+                            collisionDetection={closestCenter}
+                            onDragEnd={handleDragEnd}
+                        >
+                            <SortableContext
+                                items={filteredFaqs.map(faq => faq.id)}
+                                strategy={verticalListSortingStrategy}
+                            >
+                                <div className="space-y-3">
+                                    {filteredFaqs.map((faq) => (
+                                        <SortableFAQItem
+                                            key={faq.id}
+                                            faq={faq}
+                                            onEdit={handleEdit}
+                                            onDelete={handleDeleteClick}
+                                        />
+                                    ))}
+                                </div>
+                            </SortableContext>
+                        </DndContext>
+                    )}
                 </div>
             </div>
 
@@ -284,15 +413,6 @@ export default function CMSFAQ() {
                                         <option value="Registration">FAQ Pendaftaran (Program)</option>
                                     </select>
                                 </div>
-                                <div className="flex-1">
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Order</label>
-                                    <input
-                                        type="number"
-                                        value={formData.order}
-                                        onChange={e => setFormData({ ...formData, order: parseInt(e.target.value) })}
-                                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 outline-none"
-                                    />
-                                </div>
                             </div>
 
                             <div className="pt-4 flex gap-3 justify-end">
@@ -331,10 +451,10 @@ export default function CMSFAQ() {
                 isOpen={isDeleteModalOpen}
                 onClose={() => setIsDeleteModalOpen(false)}
                 onConfirm={handleConfirmDelete}
-                title="Hapus FAQ?"
-                message="Yakin ingin menghapus pertanyaan ini?"
+                title="Delete FAQ?"
+                message="Are you sure you want to delete this FAQ? This action cannot be undone."
                 isDanger={true}
-                confirmText="Hapus"
+                confirmText="Delete"
             />
 
             <Toast

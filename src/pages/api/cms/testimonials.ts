@@ -15,7 +15,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (req.method === 'GET') {
         try {
             const testimonials = await prisma.cms_testimonials.findMany({
-                orderBy: { created_at: 'desc' }
+                orderBy: [{ order: 'asc' }, { created_at: 'desc' }]
             });
             return res.json(serializeBigInt(testimonials));
         } catch (error) {

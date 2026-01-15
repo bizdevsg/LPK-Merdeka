@@ -1,10 +1,27 @@
 import React, { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { AdminLayout } from '@/components/layouts/AdminLayout';
-import { FaEdit, FaTrash, FaPlus, FaStar, FaUser } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaPlus, FaStar, FaUser, FaGripVertical } from 'react-icons/fa';
 import { ConfirmationModal } from '@/components/shared/molecules/ConfirmationModal';
 import { Toast } from '@/components/shared/molecules/Toast';
 import { useSearch } from '@/context/SearchContext';
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    DragEndEvent,
+} from '@dnd-kit/core';
+import {
+    arrayMove,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    useSortable,
+    verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface Testimonial {
     id: string;
@@ -13,7 +30,94 @@ interface Testimonial {
     content: string;
     avatar_url: string;
     rating: number;
+    order: number;
 }
+
+// Sortable Testimonial Item Component
+const SortableTestimonialItem = ({
+    testimonial,
+    onEdit,
+    onDelete
+}: {
+    testimonial: Testimonial;
+    onEdit: (t: Testimonial) => void;
+    onDelete: (id: string) => void;
+}) => {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({ id: testimonial.id });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+        zIndex: isDragging ? 1000 : 1,
+    };
+
+    return (
+        <div
+            ref={setNodeRef}
+            style={style}
+            className={`bg-white border border-gray-200 rounded-xl p-4 flex items-start gap-4 ${isDragging ? 'shadow-lg' : 'shadow-sm'}`}
+        >
+            {/* Drag Handle */}
+            <div
+                {...attributes}
+                {...listeners}
+                className="cursor-grab active:cursor-grabbing p-2 text-gray-400 hover:text-gray-600 mt-1"
+            >
+                <FaGripVertical />
+            </div>
+
+            {/* Order Badge */}
+            <div className="w-8 h-8 bg-yellow-100 text-yellow-600 rounded-lg flex items-center justify-center font-bold text-sm flex-shrink-0">
+                {testimonial.order || '-'}
+            </div>
+
+            {/* Avatar */}
+            <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0">
+                {testimonial.avatar_url ? (
+                    <img src={testimonial.avatar_url} alt={testimonial.name} className="w-full h-full object-cover" />
+                ) : (
+                    <FaUser className="text-gray-400" />
+                )}
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 min-w-0">
+                <h3 className="font-semibold text-gray-900">{testimonial.name}</h3>
+                <p className="text-sm text-gray-500">{testimonial.role}</p>
+                <p className="text-sm text-gray-600 mt-1 line-clamp-2">{testimonial.content}</p>
+                <div className="flex items-center gap-1 mt-2">
+                    {[...Array(5)].map((_, i) => (
+                        <FaStar key={i} className={i < testimonial.rating ? 'text-yellow-400' : 'text-gray-300'} size={12} />
+                    ))}
+                </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+                <button
+                    onClick={() => onEdit(testimonial)}
+                    className="p-2 hover:bg-gray-100 rounded-lg text-blue-600 transition"
+                >
+                    <FaEdit />
+                </button>
+                <button
+                    onClick={() => onDelete(testimonial.id)}
+                    className="p-2 hover:bg-gray-100 rounded-lg text-red-600 transition"
+                >
+                    <FaTrash />
+                </button>
+            </div>
+        </div>
+    );
+};
 
 export default function CMSTestimonials() {
     const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
@@ -30,6 +134,14 @@ export default function CMSTestimonials() {
     // Toast State
     const [toast, setToast] = useState({ isOpen: false, message: '', type: 'info' as 'success' | 'error' | 'info' | 'warning' });
 
+    // DnD Sensors
+    const sensors = useSensors(
+        useSensor(PointerSensor),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        })
+    );
+
     const getAuthHeaders = () => {
         const token = localStorage.getItem('token');
         return {
@@ -43,6 +155,8 @@ export default function CMSTestimonials() {
             const res = await fetch('/api/admin/cms/testimonials', { headers: getAuthHeaders() });
             if (res.ok) {
                 const data = await res.json();
+                // Sort by order
+                data.sort((a: Testimonial, b: Testimonial) => (a.order || 0) - (b.order || 0));
                 setTestimonials(data);
             }
         } catch (error) {
@@ -55,6 +169,47 @@ export default function CMSTestimonials() {
     useEffect(() => {
         fetchTestimonials();
     }, []);
+
+    const handleDragEnd = async (event: DragEndEvent) => {
+        const { active, over } = event;
+
+        if (over && active.id !== over.id) {
+            const oldIndex = testimonials.findIndex((t) => t.id === active.id);
+            const newIndex = testimonials.findIndex((t) => t.id === over.id);
+
+            const newTestimonials = arrayMove(testimonials, oldIndex, newIndex);
+
+            // Update order numbers
+            const updatedTestimonials = newTestimonials.map((t, index) => ({
+                ...t,
+                order: index + 1
+            }));
+
+            setTestimonials(updatedTestimonials);
+
+            // Save new order to database
+            try {
+                const res = await fetch('/api/admin/cms/testimonials/reorder', {
+                    method: 'PUT',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({
+                        items: updatedTestimonials.map(t => ({ id: t.id, order: t.order }))
+                    })
+                });
+
+                if (res.ok) {
+                    setToast({ isOpen: true, message: 'Order updated successfully', type: 'success' });
+                } else {
+                    // Revert on failure
+                    fetchTestimonials();
+                    setToast({ isOpen: true, message: 'Failed to update order', type: 'error' });
+                }
+            } catch (error) {
+                fetchTestimonials();
+                setToast({ isOpen: true, message: 'Error updating order', type: 'error' });
+            }
+        }
+    };
 
     const handleDeleteClick = (id: string) => {
         setDeleteTargetId(id);
@@ -158,73 +313,44 @@ export default function CMSTestimonials() {
                     </button>
                 </div>
 
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead className="bg-gray-50 border-b border-gray-200">
-                            <tr>
-                                <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Name</th>
-                                <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Role</th>
-                                <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Content</th>
-                                <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Rating</th>
-                                <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100">
-                            {loading ? (
-                                <tr>
-                                    <td colSpan={5} className="px-6 py-4 text-center text-gray-500">Loading...</td>
-                                </tr>
-                            ) : filteredTestimonials.length === 0 ? (
-                                <tr>
-                                    <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
-                                        {searchQuery ? `No testimonials found matching "${searchQuery}"` : "No testimonials found."}
-                                    </td>
-                                </tr>
-                            ) : (
-                                filteredTestimonials.map((testimonial) => (
-                                    <tr key={testimonial.id} className="hover:bg-gray-50 transition">
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
-                                                    {testimonial.avatar_url ? (
-                                                        <img src={testimonial.avatar_url} alt={testimonial.name} className="w-full h-full object-cover" />
-                                                    ) : (
-                                                        <FaUser className="text-gray-400" />
-                                                    )}
-                                                </div>
-                                                <span className="font-medium text-gray-900">{testimonial.name}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 text-sm text-gray-500">{testimonial.role}</td>
-                                        <td className="px-6 py-4 text-sm text-gray-500 max-w-md truncate">{testimonial.content}</td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-1">
-                                                {[...Array(5)].map((_, i) => (
-                                                    <FaStar key={i} className={i < testimonial.rating ? 'text-yellow-400' : 'text-gray-300'} size={14} />
-                                                ))}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <div className="flex items-center justify-end gap-2">
-                                                <button
-                                                    onClick={() => handleEdit(testimonial)}
-                                                    className="p-2 hover:bg-gray-100 rounded-lg text-blue-600 transition"
-                                                >
-                                                    <FaEdit />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDeleteClick(testimonial.id)}
-                                                    className="p-2 hover:bg-gray-100 rounded-lg text-red-600 transition"
-                                                >
-                                                    <FaTrash />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
+                {/* Drag and Drop Hint */}
+                <div className="px-6 py-3 bg-blue-50 border-b border-blue-100">
+                    <p className="text-sm text-blue-600 flex items-center gap-2">
+                        <FaGripVertical /> Drag and drop items to reorder. Changes are saved automatically.
+                    </p>
+                </div>
+
+                {/* Testimonials List */}
+                <div className="p-6">
+                    {loading ? (
+                        <div className="text-center py-8 text-gray-500">Loading...</div>
+                    ) : filteredTestimonials.length === 0 ? (
+                        <div className="text-center py-8 text-gray-500">
+                            {searchQuery ? `No testimonials found matching "${searchQuery}"` : "No testimonials found."}
+                        </div>
+                    ) : (
+                        <DndContext
+                            sensors={sensors}
+                            collisionDetection={closestCenter}
+                            onDragEnd={handleDragEnd}
+                        >
+                            <SortableContext
+                                items={filteredTestimonials.map(t => t.id)}
+                                strategy={verticalListSortingStrategy}
+                            >
+                                <div className="space-y-3">
+                                    {filteredTestimonials.map((testimonial) => (
+                                        <SortableTestimonialItem
+                                            key={testimonial.id}
+                                            testimonial={testimonial}
+                                            onEdit={handleEdit}
+                                            onDelete={handleDeleteClick}
+                                        />
+                                    ))}
+                                </div>
+                            </SortableContext>
+                        </DndContext>
+                    )}
                 </div>
             </div>
 
@@ -330,10 +456,10 @@ export default function CMSTestimonials() {
                 isOpen={isDeleteModalOpen}
                 onClose={() => setIsDeleteModalOpen(false)}
                 onConfirm={handleConfirmDelete}
-                title="Hapus Testimoni?"
-                message="Yakin ingin menghapus testimoni ini?"
+                title="Delete Testimonial?"
+                message="Are you sure you want to delete this testimonial? This action cannot be undone."
                 isDanger={true}
-                confirmText="Hapus"
+                confirmText="Delete"
             />
 
             <Toast

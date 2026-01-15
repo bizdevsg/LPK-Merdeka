@@ -24,7 +24,7 @@ const GallerySection = () => {
                     const transformedData: GalleryItemProps[] = data.map((item: any) => ({
                         id: parseInt(item.id),
                         type: item.type === 'video' ? 'video' : 'photo',
-                        category: (item.category || 'activity') as any,
+                        category: item.category || 'activity',
                         title: item.title || 'Untitled',
                         date: new Date(item.created_at).toLocaleDateString('id-ID', {
                             day: 'numeric',
@@ -47,7 +47,8 @@ const GallerySection = () => {
 
     const filteredItems = galleryItems.filter(item => {
         if (activeFilter === 'all') return true;
-        if (activeFilter === 'photo' || activeFilter === 'video') return item.type === activeFilter;
+        if (activeFilter === 'photo') return item.type !== 'video';
+        if (activeFilter === 'video') return item.type === 'video';
         return item.category === activeFilter;
     });
 
@@ -59,9 +60,11 @@ const GallerySection = () => {
                     activeFilter={activeFilter}
                     onFilterChange={setActiveFilter}
                 />
-                <div className="columns-1 md:columns-2 lg:columns-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {[1, 2, 3, 4, 5, 6].map((i) => (
-                        <div key={i} className="animate-pulse bg-gray-200 h-64 rounded-2xl mb-6"></div>
+                        <div key={i} className="animate-pulse">
+                            <div className="aspect-[4/3] bg-gray-200 rounded-2xl"></div>
+                        </div>
                     ))}
                 </div>
             </div>

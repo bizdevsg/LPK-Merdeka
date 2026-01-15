@@ -1,26 +1,32 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
-import { FaPlay, FaImage } from 'react-icons/fa';
+import { FaPlay, FaImage, FaExclamationTriangle } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 
-export type GalleryType = 'photo' | 'video';
-export type GalleryCategory = 'activity' | 'ceremony' | 'training' | 'culture';
+export type GalleryType = 'photo' | 'video' | 'image';
+export type GalleryCategory = 'activity' | 'ceremony' | 'training' | 'culture' | 'facility' | 'event' | 'other';
 
 export interface GalleryItemProps {
     id: number;
     type: GalleryType;
-    category: GalleryCategory;
+    category: GalleryCategory | string;
     title: string;
     date: string;
     image: string;
 }
 
 const GalleryItem: React.FC<GalleryItemProps> = ({ type, category, title, date, image }) => {
-    const categoryLabels: Record<GalleryCategory, string> = {
+    const [imageError, setImageError] = useState(false);
+    const [imageSrc, setImageSrc] = useState(image);
+
+    const categoryLabels: Record<string, string> = {
         activity: 'Aktivitas',
         ceremony: 'Upacara',
         training: 'Pelatihan',
-        culture: 'Budaya'
+        culture: 'Budaya',
+        facility: 'Fasilitas',
+        event: 'Event',
+        other: 'Lainnya'
     };
 
     // Extract YouTube ID
@@ -30,26 +36,39 @@ const GalleryItem: React.FC<GalleryItemProps> = ({ type, category, title, date, 
         return (match && match[2].length === 11) ? match[2] : null;
     };
 
+    // Determine if it's a video type
+    const isVideo = type === 'video';
+
     // Determine display image
-    let displayImage = image;
-    if (type === 'video') {
+    let displayImage = imageSrc;
+    if (isVideo) {
         const youtubeId = getYouTubeId(image);
         if (youtubeId) {
-            displayImage = `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg`;
+            displayImage = `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg`;
         } else if (image.includes('drive.google.com')) {
-            // Fallback for Drive - usually need a manual cover or API
-            // Using a high-quality placeholder or the default image if it happens to be valid
-            // For now, we unfortunately can't auto-fetch Drive thumbs easily without API key.
-            // We'll use a placeholder if the image string is obviously a drive URL
-            displayImage = '/assets/video-placeholder.jpg'; // Ensure this exists or use a colorful div
+            displayImage = '/assets/video-placeholder.jpg';
         }
     }
 
     // Handler for video click
     const handleClick = () => {
-        if (type === 'video') {
+        if (isVideo) {
             window.open(image, '_blank');
         }
+    };
+
+    // Handle image error
+    const handleImageError = () => {
+        setImageError(true);
+        // Try fallback for YouTube
+        if (displayImage.includes('maxresdefault')) {
+            setImageSrc(displayImage.replace('maxresdefault', 'hqdefault'));
+        }
+    };
+
+    // Get category label with fallback
+    const getCategoryLabel = (cat: string) => {
+        return categoryLabels[cat?.toLowerCase()] || cat || 'Lainnya';
     };
 
     return (
@@ -57,35 +76,39 @@ const GalleryItem: React.FC<GalleryItemProps> = ({ type, category, title, date, 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="group relative break-inside-avoid mb-6 cursor-pointer"
+            className="group relative cursor-pointer h-full"
             onClick={handleClick}
         >
-            <div className="relative overflow-hidden rounded-2xl bg-gray-100 shadow-lg hover:shadow-2xl transition-all duration-500">
+            <div className="relative overflow-hidden rounded-2xl bg-gray-100 shadow-lg hover:shadow-2xl transition-all duration-500 h-full">
                 {/* Image Container */}
-                <div className="relative aspect-[4/3] overflow-hidden bg-gray-900">
-                    <Image
-                        src={displayImage}
-                        alt={title}
-                        fill
-                        unoptimized
-                        className={`object-cover transform group-hover:scale-105 transition-transform duration-700 ease-out ${type === 'video' && displayImage === image ? 'opacity-50' : ''}`} // Dim if raw video url
-                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                        onError={(e) => {
-                            // Fallback if maxresdefault doesn't exist (some videos only have hqdefault)
-                            if (displayImage.includes('maxresdefault')) {
-                                const target = e.target as HTMLImageElement;
-                                target.src = displayImage.replace('maxresdefault', 'hqdefault');
-                            }
-                        }}
-                    />
+                <div className="relative aspect-[4/3] overflow-hidden bg-gray-200">
+                    {imageError ? (
+                        // Fallback placeholder for broken images
+                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+                            <div className="w-16 h-16 bg-gray-300 rounded-full flex items-center justify-center mb-3">
+                                <FaExclamationTriangle className="text-gray-400 text-2xl" />
+                            </div>
+                            <p className="text-gray-500 text-sm font-medium">Image not available</p>
+                        </div>
+                    ) : (
+                        <Image
+                            src={displayImage || '/assets/placeholder.jpg'}
+                            alt={title}
+                            fill
+                            unoptimized
+                            className={`object-cover transform group-hover:scale-105 transition-transform duration-700 ease-out`}
+                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                            onError={handleImageError}
+                        />
+                    )}
 
                     {/* Gradient Overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
 
                     {/* Type Badge */}
                     <div className="absolute top-4 right-4 z-10">
                         <div className="bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-lg flex items-center gap-2">
-                            {type === 'video' ? (
+                            {isVideo ? (
                                 <>
                                     <FaPlay className="text-red-600 text-xs" />
                                     <span className="text-xs font-semibold text-gray-800">Video</span>
@@ -100,7 +123,7 @@ const GalleryItem: React.FC<GalleryItemProps> = ({ type, category, title, date, 
                     </div>
 
                     {/* Video Play Button */}
-                    {type === 'video' && (
+                    {isVideo && !imageError && (
                         <div className="absolute inset-0 flex items-center justify-center z-10">
                             <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center border-2 border-white/50 group-hover:scale-110 group-hover:bg-red-600/80 transition-all duration-300">
                                 <FaPlay className="text-white text-xl ml-1" />
@@ -109,15 +132,15 @@ const GalleryItem: React.FC<GalleryItemProps> = ({ type, category, title, date, 
                     )}
 
                     {/* Content Overlay */}
-                    <div className="absolute bottom-0 left-0 right-0 p-5 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
+                    <div className="absolute bottom-0 left-0 right-0 p-5">
                         {/* Category Badge */}
                         <span className="inline-block px-3 py-1 bg-red-600 text-white text-xs font-bold rounded-lg mb-2 shadow-lg">
-                            {categoryLabels[category]}
+                            {getCategoryLabel(category)}
                         </span>
 
                         {/* Title & Date */}
                         <h3 className="text-white font-bold text-base md:text-lg leading-tight mb-1 line-clamp-2">
-                            {title}
+                            {title || 'Untitled'}
                         </h3>
                         <p className="text-gray-200 text-sm flex items-center gap-1">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
