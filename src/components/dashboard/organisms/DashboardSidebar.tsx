@@ -4,7 +4,7 @@ import {
     FaUser, FaCertificate, FaHistory, FaTrophy,
     FaBook, FaFileAlt, FaVideo, FaGamepad, FaPuzzlePiece,
     FaChevronDown, FaChevronRight, FaCalendarCheck,
-    FaSignOutAlt, FaInfoCircle
+    FaSignOutAlt, FaInfoCircle, FaHome
 } from "react-icons/fa";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/router";
@@ -35,9 +35,10 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, o
         {
             title: "Menu Utama",
             items: [
+                { id: "overview", label: "Overview", icon: <FaHome /> },
                 { id: "profil", label: "Profil Saya", icon: <FaUser /> },
                 { id: "absensi", label: "Absensi", icon: <FaCalendarCheck /> },
-                { id: "program", label: "Program Saya", icon: <FaFileAlt /> },
+                //{ id: "program", label: "Program Saya", icon: <FaFileAlt /> },
             ],
         },
         {

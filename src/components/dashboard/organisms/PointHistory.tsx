@@ -11,6 +11,8 @@ interface Log {
 interface Summary {
     total_points: number;
     level: number;
+    rank?: number;
+    totalUsers?: number;
 }
 
 export const PointHistory: React.FC = () => {
@@ -72,14 +74,21 @@ export const PointHistory: React.FC = () => {
             </h2>
 
             {/* Summary Card */}
-            <div className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-xl p-6 text-white shadow-lg flex items-center justify-between">
-                <div>
-                    <h3 className="text-gray-400 text-sm font-medium uppercase tracking-wider mb-1">Total XP Points</h3>
-                    <div className="text-4xl font-bold">{summary?.total_points.toLocaleString() || 0} XP</div>
-                </div>
-                <div className="text-right">
-                    <h3 className="text-gray-400 text-sm font-medium uppercase tracking-wider mb-1">Current Level</h3>
-                    <div className="text-4xl font-bold text-yellow-500">Lvl {summary?.level || 1}</div>
+            <div className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-xl p-6 text-white shadow-lg">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <h3 className="text-gray-400 text-sm font-medium uppercase tracking-wider mb-1">Total XP Points</h3>
+                        <div className="text-4xl font-bold">{summary?.total_points.toLocaleString() || 0} XP</div>
+                    </div>
+                    <div>
+                        <h3 className="text-gray-400 text-sm font-medium uppercase tracking-wider mb-1">Current Level</h3>
+                        <div className="text-4xl font-bold text-yellow-500">Lvl {summary?.level || 1}</div>
+                    </div>
+                    <div>
+                        <h3 className="text-gray-400 text-sm font-medium uppercase tracking-wider mb-1">Peringkat Global</h3>
+                        <div className="text-4xl font-bold text-blue-400">#{summary?.rank || '-'}</div>
+                        <p className="text-xs text-gray-400 mt-1">dari {summary?.totalUsers || 0} peserta</p>
+                    </div>
                 </div>
             </div>
 

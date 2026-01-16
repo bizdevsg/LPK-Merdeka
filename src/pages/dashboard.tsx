@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/router";
 import Head from "next/head";
-import { DashboardSidebar, ProfileForm, AttendanceSessionList, ArticleList, EbookList, VideoList, QuizList, Leaderboard, CertificateList, PointHistory, GamificationGuide } from "../components/dashboard/organisms";
+import { DashboardSidebar, ProfileForm, AttendanceSessionList, ArticleList, EbookList, VideoList, QuizList, Leaderboard, CertificateList, PointHistory, GamificationGuide, DashboardOverview } from "../components/dashboard/organisms";
 import { useAuth } from "@/context/AuthContext";
 import { useSearch } from '@/context/SearchContext';
 import { FaBars, FaCog, FaSignOutAlt, FaSearch, FaHome } from "react-icons/fa";
@@ -12,7 +12,7 @@ export default function DashboardPage() {
     const { user, isAuthenticated, logout } = useAuth();
     const { searchQuery, setSearchQuery } = useSearch();
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState("absensi");
+    const [activeTab, setActiveTab] = useState("overview");
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -72,6 +72,8 @@ export default function DashboardPage() {
 
     const renderContent = () => {
         switch (activeTab) {
+            case "overview":
+                return <DashboardOverview />;
             case "absensi":
                 return <AttendanceSessionList />;
             case "artikel":

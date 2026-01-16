@@ -31,9 +31,26 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
             where: { user_id: userId }
         });
 
+        // Calculate Rank
+        const totalXP = profile?.total_points || 0;
+        const higherRankedCount = await prisma.gamification_profile.count({
+            where: {
+                total_points: { gt: totalXP }
+            }
+        });
+        const rank = higherRankedCount + 1;
+
+        // Total Users
+        const totalUsers = await prisma.gamification_profile.count();
+
         return res.json({
             logs: serializeBigInt(logs),
-            summary: serializeBigInt(profile || { total_points: 0, level: 1 })
+            summary: serializeBigInt({
+                total_points: profile?.total_points || 0,
+                level: profile?.level || 1,
+                rank,
+                totalUsers
+            })
         });
     } catch (error) {
         console.error(error);

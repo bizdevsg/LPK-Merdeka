@@ -9,3 +9,4 @@ export { Leaderboard } from './Leaderboard';
 export { CertificateList } from './CertificateList';
 export { PointHistory } from './PointHistory';
 export { GamificationGuide } from './GamificationGuide';
+export { DashboardOverview } from './DashboardOverview';
