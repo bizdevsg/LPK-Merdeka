@@ -17,9 +17,8 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
 
     if (req.method === 'PUT') {
         try {
-            const { title, category_id, start_date, end_date, question_count, is_active } = req.body;
+            const { title, category_id, start_date, end_date, config, is_active } = req.body;
 
-            const config = question_count ? JSON.stringify({ question_count: parseInt(question_count) }) : undefined;
 
             const quiz = await prisma.weekly_quizzes.update({
                 where: { id: BigInt(String(id)) },

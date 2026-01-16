@@ -7,6 +7,24 @@ import { FaPlus, FaTrash, FaEdit, FaArrowLeft, FaCheckCircle, FaTimes } from 're
 import { Toast } from '@/components/shared/molecules/Toast';
 import { ConfirmationModal } from '@/components/shared/molecules/ConfirmationModal';
 import { useSearch } from '@/context/SearchContext';
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    DragEndEvent,
+} from '@dnd-kit/core';
+import {
+    arrayMove,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    verticalListSortingStrategy,
+    useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { FaGripVertical } from 'react-icons/fa';
 
 interface Question {
     id: string;
@@ -14,6 +32,7 @@ interface Question {
     options: string; // JSON string
     correct_answer: string;
     explanation: string | null;
+    order: number;
 }
 
 interface QuestionType {
@@ -25,6 +44,90 @@ interface QuestionType {
     }
 }
 
+// Sortable Question Component
+function SortableQuestion({ question, index, onEdit, onDelete }: {
+    question: Question;
+    index: number;
+    onEdit: () => void;
+    onDelete: () => void;
+}) {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({ id: question.id });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+    };
+
+    let options = [];
+    try {
+        options = JSON.parse(question.options);
+    } catch (e) { }
+
+    return (
+        <div
+            ref={setNodeRef}
+            style={style}
+            className="border-2 border-gray-200 rounded-xl p-4 hover:bg-gray-50 transition-colors bg-white"
+        >
+            <div className="flex justify-between items-start gap-4">
+                <button
+                    {...attributes}
+                    {...listeners}
+                    className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 p-2 mt-1"
+                    title="Drag to reorder"
+                >
+                    <FaGripVertical size={20} />
+                </button>
+
+                <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                        <span className="bg-gray-100 text-gray-600 text-xs font-bold px-2 py-1 rounded">Q{index + 1}</span>
+                        <h4 className="font-medium text-gray-900 line-clamp-2">{question.content}</h4>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-3 pl-2">
+                        {options.map((opt: string, i: number) => (
+                            <div key={i} className={`text-sm px-3 py-1.5 rounded-lg border ${opt === question.correct_answer ? 'bg-green-50 border-green-200 text-green-700 font-medium' : 'bg-white border-gray-100 text-gray-600'}`}>
+                                {String.fromCharCode(65 + i)}. {opt}
+                                {opt === question.correct_answer && <FaCheckCircle className="inline ml-2 mb-0.5" />}
+                            </div>
+                        ))}
+                    </div>
+
+                    {question.explanation && (
+                        <div className="mt-3 text-xs text-gray-500 bg-gray-50 p-2 rounded border border-gray-100">
+                            <span className="font-semibold">Explanation:</span> {question.explanation}
+                        </div>
+                    )}
+                </div>
+
+                <div className="flex flex-col gap-2">
+                    <button
+                        onClick={onEdit}
+                        className="p-2 text-gray-400 hover:text-blue-600 transition hover:bg-blue-50 rounded-lg"
+                    >
+                        <FaEdit />
+                    </button>
+                    <button
+                        onClick={onDelete}
+                        className="p-2 text-gray-400 hover:text-red-600 transition hover:bg-red-50 rounded-lg"
+                    >
+                        <FaTrash />
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function QuestionsManager() {
     const router = useRouter();
     const { categoryId, typeId } = router.query;
@@ -33,6 +136,55 @@ export default function QuestionsManager() {
     const [typeData, setTypeData] = useState<QuestionType | null>(null);
     const [questions, setQuestions] = useState<Question[]>([]);
     const [loading, setLoading] = useState(true);
+    const [hasChanges, setHasChanges] = useState(false);
+
+    const sensors = useSensors(
+        useSensor(PointerSensor),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        })
+    );
+
+    const handleDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
+
+        if (over && active.id !== over.id) {
+            setQuestions((items) => {
+                const oldIndex = items.findIndex((q) => q.id === active.id);
+                const newIndex = items.findIndex((q) => q.id === over.id);
+
+                const newItems = arrayMove(items, oldIndex, newIndex).map((q, idx) => ({
+                    ...q,
+                    order: idx
+                }));
+
+                return newItems;
+            });
+            setHasChanges(true);
+        }
+    };
+
+    const saveOrder = async () => {
+        try {
+            const res = await fetch(`/api/admin/content/quiz-bank/${categoryId}/${typeId}/reorder`, {
+                method: 'POST',
+                headers: getAuthHeaders(),
+                body: JSON.stringify({
+                    questions: questions.map(q => ({ id: q.id, order: q.order }))
+                })
+            });
+
+            if (res.ok) {
+                setToast({ isOpen: true, message: 'Order saved successfully', type: 'success' });
+                setHasChanges(false);
+            } else {
+                setToast({ isOpen: true, message: 'Failed to save order', type: 'error' });
+            }
+        } catch (error) {
+            console.error(error);
+            setToast({ isOpen: true, message: 'Error saving order', type: 'error' });
+        }
+    };
 
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
@@ -245,64 +397,45 @@ export default function QuestionsManager() {
                         <h2 className="text-xl font-bold text-gray-800">{typeData?.category.name} / {typeData?.name}</h2>
                         <p className="text-gray-500 text-sm mt-1">Manage questions for this type.</p>
                     </div>
-                    <button
-                        onClick={handleCreate}
-                        className="bg-red-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-red-700 transition shadow-sm"
-                    >
-                        <FaPlus /> Add Question
-                    </button>
+                    <div className="flex gap-2">
+                        {hasChanges && (
+                            <button
+                                onClick={saveOrder}
+                                className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition shadow-sm animate-in fade-in"
+                            >
+                                <FaCheckCircle /> Save Order
+                            </button>
+                        )}
+                        <button
+                            onClick={handleCreate}
+                            className="bg-red-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-red-700 transition shadow-sm"
+                        >
+                            <FaPlus /> Add Question
+                        </button>
+                    </div>
                 </div>
 
                 <div className="space-y-4">
-                    {filteredQuestions.map((question, index) => {
-                        let options = [];
-                        try {
-                            options = JSON.parse(question.options);
-                        } catch (e) { }
-
-                        return (
-                            <div key={question.id} className="border border-gray-200 rounded-xl p-4 hover:bg-gray-50 transition-colors">
-                                <div className="flex justify-between items-start gap-4">
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <span className="bg-gray-100 text-gray-600 text-xs font-bold px-2 py-1 rounded">Q{index + 1}</span>
-                                            <h4 className="font-medium text-gray-900 line-clamp-2">{question.content}</h4>
-                                        </div>
-
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-3 pl-2">
-                                            {options.map((opt: string, i: number) => (
-                                                <div key={i} className={`text-sm px-3 py-1.5 rounded-lg border ${opt === question.correct_answer ? 'bg-green-50 border-green-200 text-green-700 font-medium' : 'bg-white border-gray-100 text-gray-600'}`}>
-                                                    {String.fromCharCode(65 + i)}. {opt}
-                                                    {opt === question.correct_answer && <FaCheckCircle className="inline ml-2 mb-0.5" />}
-                                                </div>
-                                            ))}
-                                        </div>
-
-                                        {question.explanation && (
-                                            <div className="mt-3 text-xs text-gray-500 bg-gray-50 p-2 rounded border border-gray-100">
-                                                <span className="font-semibold">Explanation:</span> {question.explanation}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div className="flex flex-col gap-2">
-                                        <button
-                                            onClick={() => handleEdit(question)}
-                                            className="p-2 text-gray-400 hover:text-blue-600 transition hover:bg-blue-50 rounded-lg"
-                                        >
-                                            <FaEdit />
-                                        </button>
-                                        <button
-                                            onClick={() => handleDeleteClick(question.id)}
-                                            className="p-2 text-gray-400 hover:text-red-600 transition hover:bg-red-50 rounded-lg"
-                                        >
-                                            <FaTrash />
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    })}
+                    <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragEnd={handleDragEnd}
+                    >
+                        <SortableContext
+                            items={filteredQuestions.map(q => q.id)}
+                            strategy={verticalListSortingStrategy}
+                        >
+                            {filteredQuestions.map((question, index) => (
+                                <SortableQuestion
+                                    key={question.id}
+                                    question={question}
+                                    index={index}
+                                    onEdit={() => handleEdit(question)}
+                                    onDelete={() => handleDeleteClick(question.id)}
+                                />
+                            ))}
+                        </SortableContext>
+                    </DndContext>
 
                     {filteredQuestions.length === 0 && (
                         <div className="py-12 text-center text-gray-500 border-2 border-dashed border-gray-200 rounded-xl">

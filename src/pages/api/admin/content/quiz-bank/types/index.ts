@@ -12,7 +12,28 @@ const serializeBigInt = (obj: any) => {
     ));
 }
 
-async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
+export default checkAdmin(async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
+    if (req.method === 'GET') {
+        try {
+            const types = await prisma.question_types.findMany({
+                select: {
+                    id: true,
+                    name: true,
+                    category_id: true,
+                    _count: {
+                        select: { question_bank: true }
+                    }
+                },
+                orderBy: { name: 'asc' }
+            });
+
+            return res.json(serializeBigInt(types));
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({ message: 'Error fetching types' });
+        }
+    }
+
     if (req.method === 'POST') {
         try {
             const { name, category_id } = req.body;
@@ -35,6 +56,4 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
     }
 
     return res.status(405).json({ message: 'Method not allowed' });
-}
-
-export default checkAdmin(handler);
+});

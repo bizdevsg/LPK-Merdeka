@@ -33,13 +33,14 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
 
     if (req.method === 'POST') {
         try {
-            const { title, category_id, start_date, end_date, question_count } = req.body;
+            const { title, category_id, start_date, end_date, config } = req.body;
 
             if (!title || !category_id || !start_date || !end_date) {
                 return res.status(400).json({ message: 'Missing required fields' });
             }
 
-            const config = JSON.stringify({ question_count: parseInt(question_count) || 10 });
+            // config is already JSON stringified from frontend
+
 
             const quiz = await prisma.weekly_quizzes.create({
                 data: {

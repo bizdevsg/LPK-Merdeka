@@ -27,10 +27,21 @@ interface Category {
     name: string;
 }
 
+interface QuestionType {
+    id: string;
+    name: string;
+    category_id: string;
+    _count: {
+        question_bank: number;
+    }
+}
+
+
 export default function WeeklyQuizManager() {
     const { searchQuery } = useSearch();
     const [quizzes, setQuizzes] = useState<WeeklyQuiz[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
+    const [types, setTypes] = useState<QuestionType[]>([]);
     const [loading, setLoading] = useState(true);
 
     const [isFormOpen, setIsFormOpen] = useState(false);
@@ -39,7 +50,9 @@ export default function WeeklyQuizManager() {
     // Form State
     const [formId, setFormId] = useState('');
     const [formTitle, setFormTitle] = useState('');
-    const [formCategory, setFormCategory] = useState('');
+    const [formSelectedCategory, setFormSelectedCategory] = useState('');
+    const [formType, setFormType] = useState('');
+    const [availableQuestions, setAvailableQuestions] = useState(0);
     const [formStartDate, setFormStartDate] = useState('');
     const [formEndDate, setFormEndDate] = useState('');
     const [formQuestionCount, setFormQuestionCount] = useState<number>(10);
@@ -66,7 +79,21 @@ export default function WeeklyQuizManager() {
 
             // Fetch Categories (for Dropdown)
             const catRes = await fetch(`/api/admin/content/quiz-bank/categories`, { headers: getAuthHeaders() });
-            if (catRes.ok) setCategories(await catRes.json());
+            if (catRes.ok) {
+                const cats = await catRes.json();
+                console.log('Categories:', cats);
+                setCategories(cats);
+            }
+
+            // Fetch All Types
+            const typesRes = await fetch(`/api/admin/content/quiz-bank/types`, { headers: getAuthHeaders() });
+            if (typesRes.ok) {
+                const typesData = await typesRes.json();
+                console.log('Types fetched:', typesData);
+                setTypes(typesData);
+            } else {
+                console.error('Failed to fetch types:', await typesRes.text());
+            }
 
         } catch (error) {
             console.error(error);
@@ -93,7 +120,9 @@ export default function WeeklyQuizManager() {
     const handleCreate = () => {
         setFormId('');
         setFormTitle('');
-        setFormCategory(categories.length > 0 ? categories[0].id : '');
+        setFormSelectedCategory(categories.length > 0 ? categories[0].id : '');
+        setFormType('');
+        setAvailableQuestions(0);
         // Default: Start tomorrow, end 1 week later
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
@@ -114,7 +143,39 @@ export default function WeeklyQuizManager() {
     const handleEdit = (q: WeeklyQuiz) => {
         setFormId(q.id);
         setFormTitle(q.title);
-        setFormCategory(q.category.id);
+
+        let config: { question_count?: number, type_id?: string } = {};
+        try {
+            config = JSON.parse(q.config || '{}');
+            setFormQuestionCount(config.question_count || 10);
+        } catch (e) {
+            setFormQuestionCount(10);
+        }
+
+        // Find the type and its category based on q.category.id (which stores type_id in DB relation)
+        // Wait, q.category is currently returning {id, name} of linked "type" if the relation is correct.
+        // The prisma schema says: category question_types @relation...
+        // So q.category is actually the QuestionType.
+
+        const typeId = config.type_id;
+
+        if (typeId) {
+            // Find type and set category from it, or use existing category
+            const type = types.find(t => t.id === typeId);
+            if (type) {
+                setFormSelectedCategory(type.category_id);
+                setFormType(type.id);
+                setAvailableQuestions(type._count.question_bank);
+            } else {
+                setFormSelectedCategory(q.category.id);
+                setFormType(typeId);
+            }
+        } else {
+            // Legacy support or just category
+            setFormSelectedCategory(q.category.id);
+            setFormType('');
+        }
+
         setFormStartDate(toInputDate(q.start_date));
         setFormEndDate(toInputDate(q.end_date));
         setFormIsActive(q.is_active);
@@ -160,8 +221,13 @@ export default function WeeklyQuizManager() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!formCategory) {
-            setToast({ isOpen: true, message: 'Please select a category', type: 'error' });
+        if (!formType) {
+            setToast({ isOpen: true, message: 'Please select a question type', type: 'error' });
+            return;
+        }
+
+        if (formQuestionCount > availableQuestions) {
+            setToast({ isOpen: true, message: `Question count cannot exceed available questions (${availableQuestions})`, type: 'error' });
             return;
         }
 
@@ -173,11 +239,14 @@ export default function WeeklyQuizManager() {
 
         const payload = {
             title: formTitle,
-            category_id: formCategory,
+            category_id: formSelectedCategory,
             start_date: new Date(formStartDate).toISOString(),
             end_date: new Date(formEndDate).toISOString(),
-            question_count: formQuestionCount,
-            is_active: formIsActive
+            is_active: formIsActive,
+            config: JSON.stringify({
+                question_count: formQuestionCount,
+                type_id: formType
+            })
         };
 
         try {
@@ -306,8 +375,12 @@ export default function WeeklyQuizManager() {
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
                                 <select
                                     required
-                                    value={formCategory}
-                                    onChange={e => setFormCategory(e.target.value)}
+                                    value={formSelectedCategory}
+                                    onChange={e => {
+                                        setFormSelectedCategory(e.target.value);
+                                        setFormType(''); // Reset type when category changes
+                                        setAvailableQuestions(0);
+                                    }}
                                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 outline-none bg-white"
                                 >
                                     <option value="" disabled>Select Category</option>
@@ -315,6 +388,34 @@ export default function WeeklyQuizManager() {
                                         <option key={cat.id} value={cat.id}>{cat.name}</option>
                                     ))}
                                 </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Question Type</label>
+                                <select
+                                    required
+                                    value={formType}
+                                    onChange={e => {
+                                        const tId = e.target.value;
+                                        setFormType(tId);
+                                        const type = types.find(t => t.id === tId);
+                                        setAvailableQuestions(type?._count.question_bank || 0);
+                                    }}
+                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 outline-none bg-white"
+                                    disabled={!formSelectedCategory}
+                                >
+                                    <option value="" disabled>Select Type</option>
+                                    {types
+                                        .filter(type => type.category_id === formSelectedCategory)
+                                        .map(type => (
+                                            <option key={type.id} value={type.id}>
+                                                {type.name} ({type._count.question_bank} questions)
+                                            </option>
+                                        ))}
+                                </select>
+                                {!formSelectedCategory && (
+                                    <p className="text-xs text-gray-500 mt-1">Please select a category first</p>
+                                )}
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
@@ -345,14 +446,23 @@ export default function WeeklyQuizManager() {
                                 <input
                                     type="number"
                                     min="1"
-                                    max="50"
+                                    max={availableQuestions > 0 ? availableQuestions : 50}
                                     required
                                     value={formQuestionCount}
                                     onChange={e => setFormQuestionCount(parseInt(e.target.value))}
-                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 outline-none"
+                                    className={`w-full border rounded-lg px-3 py-2 focus:ring-2 outline-none ${formType && formQuestionCount > availableQuestions
+                                            ? 'border-red-500 focus:ring-red-200 text-red-600'
+                                            : 'border-gray-300 focus:ring-red-500'
+                                        }`}
                                     placeholder="e.g. 10"
                                 />
-                                <p className="text-xs text-gray-500 mt-1">Random questions will be selected from the category.</p>
+                                {formType && formQuestionCount > availableQuestions ? (
+                                    <p className="text-xs text-red-600 mt-1 font-medium">
+                                        ⚠️ Maximum questions available is {availableQuestions}
+                                    </p>
+                                ) : (
+                                    <p className="text-xs text-gray-500 mt-1">Random questions will be selected from the type.</p>
+                                )}
                             </div>
 
                             {formMode === 'edit' && (

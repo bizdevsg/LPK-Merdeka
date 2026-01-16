@@ -1,8 +1,6 @@
 import { NextApiResponse } from 'next';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import { checkAuth, AuthenticatedRequest } from '@/lib/auth';
-
-const prisma = new PrismaClient() as any;
 
 const serializeBigInt = (obj: any) => {
     return JSON.parse(JSON.stringify(obj, (key, value) =>
@@ -21,7 +19,7 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
         const userId = req.user?.id;
         const now = new Date();
 
-        const quizzes = await prisma.weekly_quizzes.findMany({
+        const quizzes = await (prisma as any).weekly_quizzes.findMany({
             where: {
                 is_active: true,
                 start_date: { lte: now },

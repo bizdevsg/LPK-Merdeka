@@ -9,7 +9,18 @@ interface Question {
     id: string;
     content: string;
     options: string; // JSON string
+    shuffledOptions?: string[]; // Shuffled options for display
     type_id: string;
+}
+
+// Fisher-Yates shuffle algorithm
+function shuffleArray<T>(array: T[]): T[] {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
 }
 
 export default function QuizPlayer() {
@@ -42,7 +53,12 @@ export default function QuizPlayer() {
 
             if (res.ok) {
                 const data = await res.json();
-                setQuestions(data);
+                // Shuffle options for each question
+                const questionsWithShuffled = data.map((q: Question) => ({
+                    ...q,
+                    shuffledOptions: shuffleArray(JSON.parse(q.options))
+                }));
+                setQuestions(questionsWithShuffled);
                 setQuizState('playing');
                 setCurrentIndex(0);
             } else {
@@ -176,33 +192,30 @@ export default function QuizPlayer() {
 
                             <div className="space-y-3 mb-8">
                                 {(() => {
-                                    try {
-                                        const opts = JSON.parse(questions[currentIndex].options);
-                                        return opts.map((opt: string, idx: number) => {
-                                            const isSelected = answers[questions[currentIndex].id] === opt;
-                                            return (
-                                                <button
-                                                    key={idx}
-                                                    onClick={() => handleAnswer(opt)}
-                                                    className={`w-full text-left p-4 rounded-xl border-2 transition-all flex items-center justify-between group ${isSelected
-                                                        ? 'border-red-600 bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200'
-                                                        : 'border-gray-100 dark:border-zinc-800 hover:border-red-200 hover:bg-gray-50 dark:hover:bg-zinc-800 text-gray-700 dark:text-gray-300'
-                                                        }`}
-                                                >
-                                                    <div className="flex items-center gap-4">
-                                                        <span className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm border ${isSelected ? 'bg-red-600 text-white border-red-600' : 'bg-white dark:bg-zinc-800 text-gray-400 border-gray-200 dark:border-zinc-700'
-                                                            }`}>
-                                                            {String.fromCharCode(65 + idx)}
-                                                        </span>
-                                                        <span className="font-medium">{opt}</span>
-                                                    </div>
-                                                    {isSelected && <FaCheckCircle className="text-red-600" />}
-                                                </button>
-                                            );
-                                        });
-                                    } catch (e) {
-                                        return <p className="text-red-500">Error rendering options</p>;
-                                    }
+                                    const currentQ = questions[currentIndex];
+                                    const opts = currentQ.shuffledOptions || JSON.parse(currentQ.options);
+                                    return opts.map((opt: string, idx: number) => {
+                                        const isSelected = answers[currentQ.id] === opt;
+                                        return (
+                                            <button
+                                                key={idx}
+                                                onClick={() => handleAnswer(opt)}
+                                                className={`w-full text-left p-4 rounded-xl border-2 transition-all flex items-center justify-between group ${isSelected
+                                                    ? 'border-red-600 bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200'
+                                                    : 'border-gray-100 dark:border-zinc-800 hover:border-red-200 hover:bg-gray-50 dark:hover:bg-zinc-800 text-gray-700 dark:text-gray-300'
+                                                    }`}
+                                            >
+                                                <div className="flex items-center gap-4">
+                                                    <span className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm border ${isSelected ? 'bg-red-600 text-white border-red-600' : 'bg-white dark:bg-zinc-800 text-gray-400 border-gray-200 dark:border-zinc-700'
+                                                        }`}>
+                                                        {String.fromCharCode(65 + idx)}
+                                                    </span>
+                                                    <span className="font-medium">{opt}</span>
+                                                </div>
+                                                {isSelected && <FaCheckCircle className="text-red-600" />}
+                                            </button>
+                                        );
+                                    });
                                 })()}
                             </div>
 

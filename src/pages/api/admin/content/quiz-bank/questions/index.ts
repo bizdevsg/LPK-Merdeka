@@ -1,8 +1,6 @@
 import { NextApiResponse } from 'next';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import { checkAdmin, AuthenticatedRequest } from '@/lib/auth';
-
-const prisma = new PrismaClient() as any;
 
 const serializeBigInt = (obj: any) => {
     return JSON.parse(JSON.stringify(obj, (key, value) =>
@@ -17,7 +15,7 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
         try {
             const { type_id } = req.query;
 
-            const questions = await prisma.question_bank.findMany({
+            const questions = await (prisma as any).question_bank.findMany({
                 where: type_id ? { type_id: BigInt(String(type_id)) } : undefined,
                 include: {
                     type: {
@@ -26,11 +24,14 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
                         }
                     }
                 },
-                orderBy: { created_at: 'desc' }
+                orderBy: [
+                    { order: 'asc' },
+                    { created_at: 'desc' }
+                ]
             });
             return res.json(serializeBigInt(questions));
         } catch (error) {
-            console.error(error);
+            console.error('Error fetching questions:', error);
             return res.status(500).json({ message: 'Error fetching questions' });
         }
     }
@@ -39,25 +40,36 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
         try {
             const { content, options, correct_answer, explanation, type_id } = req.body;
 
+            console.log('Creating question for type_id:', type_id);
+
             if (!content || !options || !correct_answer || !type_id) {
                 return res.status(400).json({ message: 'Content, options, correct answer, and type ID are required' });
             }
 
+            // Calculate next order
+            const lastQuestion = await (prisma as any).question_bank.findFirst({
+                where: { type_id: BigInt(type_id) },
+                orderBy: { order: 'desc' },
+                select: { order: true }
+            });
+            const nextOrder = (lastQuestion?.order ?? -1) + 1;
+
             // Ensure options is stringified JSON if it comes as an object/array
             const optionsString = typeof options === 'string' ? options : JSON.stringify(options);
 
-            const question = await prisma.question_bank.create({
+            const question = await (prisma as any).question_bank.create({
                 data: {
                     content,
                     options: optionsString,
                     correct_answer,
                     explanation,
-                    type_id: BigInt(type_id)
+                    type_id: BigInt(type_id),
+                    order: nextOrder
                 }
             });
             return res.json(serializeBigInt(question));
         } catch (error) {
-            console.error(error);
+            console.error('Error creating question:', error);
             return res.status(500).json({ message: 'Error creating question' });
         }
     }

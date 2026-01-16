@@ -39,37 +39,59 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
             return res.status(400).json({ message: 'You have already attempted this quiz' });
         }
 
-        // 2. Parse Config
+        // 2. Parse Config (optional, for future use)
         let questionCount = 10;
+        let config: any = {};
         try {
-            const config = JSON.parse(quiz.config || '{}');
+            config = JSON.parse(quiz.config || '{}');
             if (config.question_count) questionCount = config.question_count;
         } catch (e) { }
 
-        // 3. Fetch Questions from Category
-        // We link question -> type -> category
-        const questions = await prisma.question_bank.findMany({
-            where: {
-                type: {
-                    category_id: quiz.category_id
+        // 3. Fetch Questions from quiz_question_order (ordered questions)
+        const questionOrders = await prisma.quiz_question_order.findMany({
+            where: { quiz_id: BigInt(String(id)) },
+            include: {
+                question: {
+                    select: {
+                        id: true,
+                        content: true,
+                        options: true,
+                        type_id: true,
+                        // Exclude correct_answer and explanation
+                    }
                 }
             },
-            select: {
-                id: true,
-                content: true,
-                options: true,
-                type_id: true,
-                // Exclude correct_answer and explanation
-            }
+            orderBy: { order: 'asc' }
         });
 
-        if (questions.length === 0) {
-            return res.status(500).json({ message: 'No questions available for this quiz' });
+        if (questionOrders.length === 0) {
+            // Fallback: If no questions assigned via junction table, use type-based questions (preferred) or category-based
+            const typeId = config.type_id;
+
+            const whereClause = typeId
+                ? { type_id: BigInt(String(typeId)) }
+                : { type: { category_id: quiz.category_id } };
+
+            const questions = await prisma.question_bank.findMany({
+                where: whereClause,
+                select: {
+                    id: true,
+                    content: true,
+                    options: true,
+                    type_id: true,
+                },
+                take: questionCount
+            });
+
+            if (questions.length === 0) {
+                return res.status(500).json({ message: 'No questions available for this quiz' });
+            }
+
+            return res.json(serializeBigInt(questions));
         }
 
-        // 4. Randomize and Slice
-        const shuffled = questions.sort(() => 0.5 - Math.random());
-        const selected = shuffled.slice(0, questionCount);
+        // 4. Extract questions in order
+        const selected = questionOrders.map((qo: any) => qo.question);
 
         return res.json(serializeBigInt(selected));
 

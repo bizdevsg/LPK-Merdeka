@@ -21,6 +21,7 @@ export const DashboardOverview: React.FC = () => {
     const { user } = useAuth();
     const [stats, setStats] = useState<DashboardStats | null>(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
 
     useEffect(() => {
         const fetchStats = async () => {
@@ -28,9 +29,13 @@ export const DashboardOverview: React.FC = () => {
                 const res = await fetch('/api/user/dashboard/stats');
                 if (res.ok) {
                     setStats(await res.json());
+                } else {
+                    console.error("Failed to fetch stats:", await res.text());
+                    setError(true);
                 }
             } catch (error) {
                 console.error("Failed to fetch dashboard stats", error);
+                setError(true);
             } finally {
                 setLoading(false);
             }
@@ -55,6 +60,20 @@ export const DashboardOverview: React.FC = () => {
 
     if (loading) {
         return <div className="p-8 text-center text-gray-500">Memuat dashboard...</div>;
+    }
+
+    if (error || !stats) {
+        return (
+            <div className="p-8 text-center">
+                <p className="text-gray-500 mb-4">Gagal memuat data dashboard</p>
+                <button
+                    onClick={() => window.location.reload()}
+                    className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"
+                >
+                    Muat Ulang
+                </button>
+            </div>
+        );
     }
 
     const rankBadge = stats ? getRankBadge(stats.rank) : null;
