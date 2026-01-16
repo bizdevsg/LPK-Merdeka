@@ -32,6 +32,20 @@ export default function DashboardPage() {
 
 
     useEffect(() => {
+        if (router.isReady && router.query.tab) {
+            setActiveTab(String(router.query.tab));
+        }
+    }, [router.isReady, router.query.tab]);
+
+    const handleTabChange = (tab: string) => {
+        setActiveTab(tab);
+        router.push({
+            pathname: router.pathname,
+            query: { ...router.query, tab },
+        }, undefined, { shallow: true });
+    };
+
+    useEffect(() => {
         // Auth check relies on useAuth() which is cookie-based via better-auth
         if (!loading && !isAuthenticated) {
             router.push('/auth/login');
@@ -100,7 +114,7 @@ export default function DashboardPage() {
                 {/* Fixed Sidebar */}
                 <DashboardSidebar
                     activeTab={activeTab}
-                    onTabChange={setActiveTab}
+                    onTabChange={handleTabChange}
                     isOpen={sidebarOpen}
                     onClose={() => setSidebarOpen(false)}
                 />
@@ -157,7 +171,7 @@ export default function DashboardPage() {
                                             Beranda
                                         </Link>
                                         <button
-                                            onClick={() => setActiveTab('profil')} // Or link to profile page
+                                            onClick={() => handleTabChange('profil')} // Or link to profile page
                                             className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800 flex items-center gap-2 transition-colors"
                                         >
                                             <FaCog className="text-gray-400" />

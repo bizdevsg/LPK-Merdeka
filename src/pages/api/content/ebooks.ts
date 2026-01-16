@@ -9,7 +9,12 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
     }
 
     try {
+        const { folder_id } = req.query;
+
+        const whereClause = folder_id ? { folder_id: BigInt(folder_id as string) } : {};
+
         const ebooks = await (prisma as any).ebooks.findMany({
+            where: whereClause,
             orderBy: { created_at: 'desc' },
             include: {
                 folder: {

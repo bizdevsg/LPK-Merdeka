@@ -21,13 +21,18 @@ interface Folder {
     name: string;
 }
 
+import { useSearch } from '@/context/SearchContext';
+
 export default function FolderEbooks() {
     const router = useRouter();
     const { folderId } = router.query;
+    const { searchQuery } = useSearch();
 
     const [folder, setFolder] = useState<Folder | null>(null);
     const [ebooks, setEbooks] = useState<Ebook[]>([]);
     const [loading, setLoading] = useState(true);
+
+    // ... (rest of state)
 
     // Form State
     const [isFormOpen, setIsFormOpen] = useState(false);
@@ -199,6 +204,11 @@ export default function FolderEbooks() {
         }
     };
 
+    const filteredEbooks = ebooks.filter(e =>
+        e.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        e.description.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
     if (loading && !folder) return (
         <AdminLayout>
             <div className="p-8 text-center text-gray-500">Loading...</div>
@@ -243,14 +253,14 @@ export default function FolderEbooks() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                            {ebooks.length === 0 ? (
+                            {filteredEbooks.length === 0 ? (
                                 <tr>
                                     <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
-                                        No ebooks found in this folder.
+                                        {searchQuery ? `No ebooks found matching "${searchQuery}"` : 'No ebooks found in this folder.'}
                                     </td>
                                 </tr>
                             ) : (
-                                ebooks.map((ebook) => (
+                                filteredEbooks.map((ebook) => (
                                     <tr key={ebook.id} className="hover:bg-gray-50 transition">
                                         <td className="px-6 py-4">
                                             <div className="w-12 h-16 bg-gray-200 rounded overflow-hidden flex items-center justify-center text-gray-400 relative">

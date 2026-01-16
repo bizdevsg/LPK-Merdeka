@@ -19,7 +19,10 @@ interface FolderManagerProps {
     baseUrl: string; // e.g., '/admin/content/ebooks'
 }
 
+import { useSearch } from '@/context/SearchContext';
+
 export const FolderManager: React.FC<FolderManagerProps> = ({ type, baseUrl }) => {
+    const { searchQuery } = useSearch();
     const [folders, setFolders] = useState<Folder[]>([]);
     const [loading, setLoading] = useState(true);
     const [isFormOpen, setIsFormOpen] = useState(false);
@@ -120,6 +123,11 @@ export const FolderManager: React.FC<FolderManagerProps> = ({ type, baseUrl }) =
         }
     };
 
+    const filteredFolders = folders.filter(f =>
+        f.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        f.description.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
     if (loading) return <div className="p-8 text-center text-gray-500">Loading Content folders...</div>;
 
     return (
@@ -135,7 +143,7 @@ export const FolderManager: React.FC<FolderManagerProps> = ({ type, baseUrl }) =
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {folders.map(folder => (
+                {filteredFolders.map(folder => (
                     <div key={folder.id} className="group relative bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-200">
                         <Link href={`${baseUrl}/${folder.id}`} className="block p-6">
                             <div className="flex items-center justify-between mb-4">

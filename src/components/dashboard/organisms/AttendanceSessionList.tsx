@@ -12,8 +12,11 @@ interface AttendanceSession {
     is_checked_in?: boolean;
 }
 
+import { useSearch } from '@/context/SearchContext';
+
 export const AttendanceSessionList: React.FC = () => {
     const { user } = useAuth();
+    const { searchQuery } = useSearch();
     const [sessions, setSessions] = useState<AttendanceSession[]>([]);
     const [loading, setLoading] = useState(true);
     const [checkingIn, setCheckingIn] = useState<number | null>(null);
@@ -107,6 +110,10 @@ export const AttendanceSessionList: React.FC = () => {
         return new Intl.DateTimeFormat('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(date);
     };
 
+    const filteredSessions = sessions.filter(session =>
+        session.title.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
     if (loading) {
         return <div className="p-8 text-center text-gray-500 animate-pulse">Memuat jadwal absensi...</div>;
     }
@@ -122,17 +129,21 @@ export const AttendanceSessionList: React.FC = () => {
                 </div>
             )}
 
-            {sessions.length === 0 ? (
+            {filteredSessions.length === 0 ? (
                 <div className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-700 rounded-xl p-8 text-center">
                     <div className="w-16 h-16 bg-gray-100 text-gray-400 rounded-full flex items-center justify-center mx-auto mb-4">
                         <FaCalendarCheck size={24} />
                     </div>
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-white">Tidak ada sesi aktif</h3>
-                    <p className="text-gray-500 mt-2">Belum ada jadwal absensi yang tersedia saat ini.</p>
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                        {searchQuery ? 'Sesi tidak ditemukan' : 'Tidak ada sesi aktif'}
+                    </h3>
+                    <p className="text-gray-500 mt-2">
+                        {searchQuery ? `Tidak ada sesi absensi yang cocok dengan "${searchQuery}"` : 'Belum ada jadwal absensi yang tersedia saat ini.'}
+                    </p>
                 </div>
             ) : (
                 <div className="grid gap-4">
-                    {sessions.map((session) => (
+                    {filteredSessions.map((session) => (
                         <div key={session.id} className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-700 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
                             {session.is_active && (
                                 <div className="absolute top-0 right-0 bg-green-500 text-white text-xs px-3 py-1 rounded-bl-xl font-medium">

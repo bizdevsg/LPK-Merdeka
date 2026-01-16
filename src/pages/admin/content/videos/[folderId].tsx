@@ -22,13 +22,18 @@ interface Folder {
     name: string;
 }
 
+import { useSearch } from '@/context/SearchContext';
+
 export default function FolderVideos() {
     const router = useRouter();
     const { folderId } = router.query;
+    const { searchQuery } = useSearch();
 
     const [folder, setFolder] = useState<Folder | null>(null);
     const [videos, setVideos] = useState<Video[]>([]);
     const [loading, setLoading] = useState(true);
+
+    // ... (rest of state)
 
     // Form State
     const [isFormOpen, setIsFormOpen] = useState(false);
@@ -44,6 +49,11 @@ export default function FolderVideos() {
 
     // Preview State
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+    // Delete State
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+    const [toast, setToast] = useState({ isOpen: false, message: '', type: 'info' as 'success' | 'error' | 'info' });
 
     const getDriveId = (url: string) => {
         const match = url.match(/\/d\/([-\w]{25,})/);
@@ -87,11 +97,6 @@ export default function FolderVideos() {
 
         setPreviewUrl(videoUrl);
     }
-
-    // Delete State
-    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-    const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
-    const [toast, setToast] = useState({ isOpen: false, message: '', type: 'info' as 'success' | 'error' | 'info' });
 
     const getAuthHeaders = () => {
         const token = localStorage.getItem('token');
@@ -211,6 +216,11 @@ export default function FolderVideos() {
         }
     };
 
+    const filteredVideos = videos.filter(v =>
+        v.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        v.description.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
     if (loading && !folder) return (
         <AdminLayout>
             <div className="p-8 text-center text-gray-500">Loading...</div>
@@ -254,14 +264,14 @@ export default function FolderVideos() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                            {videos.length === 0 ? (
+                            {filteredVideos.length === 0 ? (
                                 <tr>
                                     <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
-                                        No videos found in this folder.
+                                        {searchQuery ? `No videos found matching "${searchQuery}"` : 'No videos found in this folder.'}
                                     </td>
                                 </tr>
                             ) : (
-                                videos.map((video) => (
+                                filteredVideos.map((video) => (
                                     <tr key={video.id} className="hover:bg-gray-50 transition">
                                         <td className="px-6 py-4">
                                             <div className="flex items-start gap-4">
@@ -389,16 +399,6 @@ export default function FolderVideos() {
                                 </p>
                             </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Duration (minutes)</label>
-                                <input
-                                    type="number"
-                                    value={formData.duration}
-                                    onChange={e => setFormData({ ...formData, duration: e.target.value })}
-                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 outline-none"
-                                    placeholder="e.g. 15"
-                                />
-                            </div>
 
                             <div className="flex justify-end gap-3 pt-6 border-t border-gray-100">
                                 <button
