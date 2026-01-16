@@ -25,6 +25,16 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => 
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const [userProfile, setUserProfile] = useState<any>(null);
+
+    useEffect(() => {
+        if (user) {
+            fetch('/api/user')
+                .then(res => res.json())
+                .then(data => setUserProfile(data))
+                .catch(err => console.error("Failed to fetch admin profile", err));
+        }
+    }, [user]);
 
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
@@ -199,11 +209,21 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => 
                                 className="flex items-center gap-3 pl-4 border-l border-gray-200 focus:outline-none"
                             >
                                 <div className="text-right hidden sm:block">
-                                    <p className="text-sm font-medium text-gray-900">{user?.name || 'Admin'}</p>
+                                    <p className="text-sm font-medium text-gray-900">{userProfile?.name || user?.name || 'Admin'}</p>
                                     <p className="text-xs text-gray-500">{user?.role || 'Administrator'}</p>
                                 </div>
-                                <div className="w-9 h-9 bg-red-100 text-red-600 rounded-full flex items-center justify-center font-bold text-sm">
-                                    {user?.name?.charAt(0) || 'A'}
+                                <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden border border-gray-200 relative">
+                                    {(userProfile?.photo_url || userProfile?.image || user?.image) ? (
+                                        <img
+                                            src={userProfile?.photo_url || userProfile?.image || user?.image}
+                                            alt="Profile"
+                                            className="w-full h-full object-cover"
+                                        />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center bg-red-100 text-red-600 font-bold text-sm">
+                                            {(userProfile?.name || user?.name || 'A').charAt(0).toUpperCase()}
+                                        </div>
+                                    )}
                                 </div>
                             </button>
 

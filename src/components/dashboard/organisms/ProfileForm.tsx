@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from "react";
-import { FaUser, FaEnvelope, FaLock, FaSave, FaEye, FaEyeSlash, FaPhone, FaMapMarkerAlt, FaCalendar, FaVenusMars, FaCamera, FaImage } from "react-icons/fa";
+import React, { useState, useEffect, useCallback } from "react";
+import { FaUser, FaEnvelope, FaLock, FaSave, FaEye, FaEyeSlash, FaPhone, FaMapMarkerAlt, FaCalendar, FaVenusMars, FaCamera, FaTimes, FaCheck } from "react-icons/fa";
 import { useAuth } from "@/context/AuthContext";
 import { authClient } from "@/lib/auth-client";
 import Image from "next/image";
+import Cropper from 'react-easy-crop';
+import { getCroppedImg } from "@/lib/cropImage";
 
 export const ProfileForm = () => {
-    const { user } = useAuth(); // Removed refreshUser
+    const { user } = useAuth();
 
     // Core fields
     const [name, setName] = useState("");
@@ -31,11 +33,16 @@ export const ProfileForm = () => {
     const [uploading, setUploading] = useState(false);
     const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
+    // Cropper State
+    const [imageSrc, setImageSrc] = useState<string | null>(null);
+    const [crop, setCrop] = useState({ x: 0, y: 0 });
+    const [zoom, setZoom] = useState(1);
+    const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
+    const [showCropModal, setShowCropModal] = useState(false);
+
     useEffect(() => {
         const fetchProfile = async () => {
             try {
-                // Fetch fresh data from DB to ensure we have latest fields (gender, etc.)
-                // Session data might be stale or missing custom types until server restart
                 const res = await fetch('/api/user');
                 if (res.ok) {
                     const u = await res.json();
@@ -51,7 +58,6 @@ export const ProfileForm = () => {
                 }
             } catch (error) {
                 console.error("Failed to fetch fresh profile data:", error);
-                // Fallback to session user if API fails
                 if (user) {
                     setName(user.name || "");
                     setEmail(user.email || "");
@@ -60,19 +66,39 @@ export const ProfileForm = () => {
         };
 
         fetchProfile();
-    }, [user]); // Re-run if user context changes (e.g. login)
+    }, [user]);
+
+    const onCropComplete = useCallback((croppedArea: any, croppedAreaPixels: any) => {
+        setCroppedAreaPixels(croppedAreaPixels);
+    }, []);
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
+        if (e.target.files && e.target.files.length > 0) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.addEventListener('load', () => {
+                setImageSrc(reader.result as string);
+                setShowCropModal(true);
+            });
+            reader.readAsDataURL(file);
+        }
+        // Reset input logic if needed
+        e.target.value = '';
+    };
+
+    const handleUploadCropped = async () => {
+        if (!imageSrc || !croppedAreaPixels) return;
 
         setUploading(true);
         setMessage(null);
 
-        const formData = new FormData();
-        formData.append("file", file);
-
         try {
+            const croppedBlob = await getCroppedImg(imageSrc, croppedAreaPixels);
+            if (!croppedBlob) throw new Error("Failed to crop image");
+
+            const formData = new FormData();
+            formData.append("file", croppedBlob, "profile.jpg");
+
             const res = await fetch("/api/upload/profile-photo", {
                 method: "POST",
                 body: formData,
@@ -83,6 +109,8 @@ export const ProfileForm = () => {
 
             setPhotoUrl(data.url);
             setMessage({ type: "success", text: "Foto berhasil diunggah! Jangan lupa simpan perubahan." });
+            setShowCropModal(false);
+            setImageSrc(null);
         } catch (error: any) {
             setMessage({ type: "error", text: error.message });
         } finally {
@@ -95,7 +123,6 @@ export const ProfileForm = () => {
         setLoading(true);
         setMessage(null);
 
-        // Validation for password match
         if (password && password !== passwordConfirmation) {
             setLoading(false);
             setMessage({ type: "error", text: "Password confirmation does not match." });
@@ -109,7 +136,6 @@ export const ProfileForm = () => {
         }
 
         try {
-            // 1. Update Profile Fields via Custom API
             const res = await fetch("/api/user", {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
@@ -129,7 +155,6 @@ export const ProfileForm = () => {
                 throw new Error(data.message || "Gagal memperbarui profil");
             }
 
-            // 2. Change Password (if provided) via Auth Client (Better Auth)
             if (password) {
                 const { error } = await authClient.changePassword({
                     newPassword: password,
@@ -154,6 +179,53 @@ export const ProfileForm = () => {
 
     return (
         <div className="max-w-4xl mx-auto">
+            {/* Crop Modal */}
+            {showCropModal && imageSrc && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+                    <div className="bg-white dark:bg-zinc-900 rounded-xl w-full max-w-lg overflow-hidden flex flex-col h-[500px]">
+                        <div className="p-4 border-b border-gray-100 dark:border-zinc-800 flex justify-between items-center bg-white dark:bg-zinc-900 z-10">
+                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Sesuaikan Foto</h3>
+                            <button onClick={() => setShowCropModal(false)} className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+                                <FaTimes />
+                            </button>
+                        </div>
+                        <div className="relative flex-1 bg-black">
+                            <Cropper
+                                image={imageSrc}
+                                crop={crop}
+                                zoom={zoom}
+                                aspect={1}
+                                onCropChange={setCrop}
+                                onCropComplete={onCropComplete}
+                                onZoomChange={setZoom}
+                            />
+                        </div>
+                        <div className="p-4 bg-white dark:bg-zinc-900 border-t border-gray-100 dark:border-zinc-800 flex flex-col gap-4">
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs text-gray-500">Zoom</span>
+                                <input
+                                    type="range"
+                                    value={zoom}
+                                    min={1}
+                                    max={3}
+                                    step={0.1}
+                                    aria-labelledby="Zoom"
+                                    onChange={(e) => setZoom(Number(e.target.value))}
+                                    className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                                />
+                            </div>
+                            <button
+                                onClick={handleUploadCropped}
+                                disabled={uploading}
+                                className="w-full py-2 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition px-4 flex items-center justify-center gap-2"
+                            >
+                                {uploading ? "Memproses..." : <><FaCheck /> Simpan Foto</>}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-gray-100 dark:border-zinc-800 p-6 md:p-8">
                 <div className="flex flex-col md:flex-row items-center gap-6 mb-8">
                     <div className="relative group">
@@ -173,7 +245,7 @@ export const ProfileForm = () => {
                     <div className="text-center md:text-left">
                         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Edit Profile</h2>
                         <p className="text-sm text-gray-500 dark:text-gray-400">Lengkapi data diri anda untuk mengakses fitur lainnya.</p>
-                        {uploading && <p className="text-xs text-blue-500 mt-1">Mengunggah foto...</p>}
+                        {uploading && !showCropModal && <p className="text-xs text-blue-500 mt-1">Mengunggah foto...</p>}
                     </div>
                 </div>
 

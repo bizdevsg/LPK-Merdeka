@@ -13,6 +13,9 @@ interface User {
   name?: string;
   email?: string;
   avatar?: string;
+  image?: string;
+  photo_url?: string;
+  role?: string;
 }
 
 interface NavbarProps {
@@ -120,10 +123,16 @@ export const Navbar: React.FC<NavbarProps> = ({
                 className="flex items-center gap-2 bg-red-700/50 hover:bg-red-700 rounded-full px-4 py-1.5 cursor-pointer transition-colors border border-red-500/50 select-none"
                 onClick={toggleDropdown}
               >
-                {/* Placeholder Avatar */}
-                <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold border border-white/30">
-                  {user?.name?.charAt(0).toUpperCase() || "U"}
-                </div>
+                {/* Avatar */}
+                {(user?.photo_url || user?.image || user?.avatar) ? (
+                  <div className="w-8 h-8 rounded-full border border-white/30 overflow-hidden relative">
+                    <img src={user.photo_url || user.image || user.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                  </div>
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold border border-white/30">
+                    {user?.name?.charAt(0).toUpperCase() || "U"}
+                  </div>
+                )}
                 <span className="text-sm font-medium max-w-[100px] truncate hidden lg:block">{user?.name || "User"}</span>
                 <FaChevronDown className={`text-xs transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
               </div>
@@ -192,8 +201,12 @@ export const Navbar: React.FC<NavbarProps> = ({
             <>
               <div className="border-t border-red-500/50 pt-4 mt-2">
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center font-bold border border-white/30">
-                    {user?.name?.charAt(0).toUpperCase() || "U"}
+                  <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center font-bold border border-white/30 overflow-hidden">
+                    {(user?.photo_url || user?.image || user?.avatar) ? (
+                      <img src={user.photo_url || user.image || user.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      (user?.name?.charAt(0).toUpperCase() || "U")
+                    )}
                   </div>
                   <div>
                     <p className="font-semibold">{user?.name}</p>

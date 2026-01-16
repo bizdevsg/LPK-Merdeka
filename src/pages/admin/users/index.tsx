@@ -12,6 +12,8 @@ interface User {
     email: string;
     role: string;
     created_at: string;
+    image?: string;
+    photo_url?: string;
 }
 
 export default function UsersManagement() {
@@ -180,8 +182,12 @@ export default function UsersManagement() {
                                     <tr key={user.id} className="hover:bg-gray-50 transition">
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">
-                                                    <FaUser size={12} />
+                                                <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 overflow-hidden relative border border-gray-300">
+                                                    {(user.photo_url || user.image) ? (
+                                                        <img src={user.photo_url || user.image} alt={user.name} className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <FaUser size={12} />
+                                                    )}
                                                 </div>
                                                 <div>
                                                     <div className="font-medium text-gray-900">{user.name}</div>

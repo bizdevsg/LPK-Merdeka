@@ -14,7 +14,9 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
                     name: true,
                     email: true,
                     role: true,
-                    createdAt: true
+                    createdAt: true,
+                    image: true,
+                    photo_url: true
                 }
             });
 

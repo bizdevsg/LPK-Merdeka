@@ -22,7 +22,7 @@ export default async function handler(req: any, res: NextApiResponse) {
             orderBy: { total_points: 'desc' },
             include: {
                 user: {
-                    select: { name: true, image: true, role: true } // Minimal info for public
+                    select: { name: true, image: true, role: true, photo_url: true } // Minimal info for public
                 }
             }
         });
@@ -32,7 +32,7 @@ export default async function handler(req: any, res: NextApiResponse) {
             id: index + 1, // Frontend expects generic ID
             title: entry.user.name,
             description: entry.user.role || 'Member', // Use role as description
-            avatar: entry.user.image,
+            avatar: entry.user.photo_url || entry.user.image,
             score: entry.total_points
         }));
 

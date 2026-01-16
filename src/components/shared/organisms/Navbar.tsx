@@ -7,6 +7,16 @@ import { useAuth } from "@/context/AuthContext";
 export const Navbar = ({ hideNavigation = false }: { hideNavigation?: boolean }) => {
   const router = useRouter();
   const { isAuthenticated, user, logout } = useAuth();
+  const [userProfile, setUserProfile] = React.useState<any>(null);
+
+  React.useEffect(() => {
+    if (isAuthenticated) {
+      fetch('/api/user')
+        .then(res => res.json())
+        .then(data => setUserProfile(data))
+        .catch(err => console.error("Nav fetch error", err));
+    }
+  }, [isAuthenticated]);
 
   const navItems = [
     { id: "beranda", label: "Beranda", href: "/" },
@@ -49,7 +59,8 @@ export const Navbar = ({ hideNavigation = false }: { hideNavigation?: boolean })
       onLoginClick={() => router.push("/auth/login")}
       onRegisterClick={() => router.push("/auth/register")}
       isAuthenticated={isAuthenticated}
-      user={user}
+
+      user={userProfile || user}
       onDashboardClick={() => router.push(user?.role === 'admin' || user?.role === 'superAdmin' ? "/admin/dashboard" : "/dashboard")}
       onLogoutClick={logout}
       hideNavigation={hideNavigation}
