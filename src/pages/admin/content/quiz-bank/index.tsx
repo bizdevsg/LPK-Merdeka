@@ -21,6 +21,7 @@ export default function QuizBankIndex() {
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
     const [formData, setFormData] = useState({ id: '', name: '', description: '' });
+    const [touched, setTouched] = useState<Record<string, boolean>>({});
 
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
@@ -56,12 +57,14 @@ export default function QuizBankIndex() {
     const handleCreate = () => {
         setFormData({ id: '', name: '', description: '' });
         setFormMode('create');
+        setTouched({});
         setIsFormOpen(true);
     };
 
     const handleEdit = (category: QuizCategory) => {
         setFormData({ id: category.id, name: category.name, description: category.description });
         setFormMode('edit');
+        setTouched({});
         setIsFormOpen(true);
     };
 
@@ -212,9 +215,11 @@ export default function QuizBankIndex() {
                                     required
                                     value={formData.name}
                                     onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 outline-none"
+                                    onBlur={() => setTouched({ ...touched, name: true })}
+                                    className={`w-full border rounded-lg px-3 py-2 outline-none ${touched.name && !formData.name ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-red-500 focus:ring-2'}`}
                                     placeholder="e.g. History"
                                 />
+                                {touched.name && !formData.name && <p className="text-xs text-red-600 mt-1">Category name is required</p>}
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>

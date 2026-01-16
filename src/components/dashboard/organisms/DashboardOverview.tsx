@@ -198,11 +198,16 @@ export const DashboardOverview: React.FC = () => {
                             {stats.recentActivities.slice(0, 5).map((activity, idx) => (
                                 <div key={idx} className="p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                        <span className="text-sm text-gray-700 dark:text-gray-300">
-                                            {activity.type === 'quiz' && '🎮 Menyelesaikan Kuis'}
-                                            {activity.type === 'video_watch' && '🎥 Menonton Video'}
-                                            {activity.type === 'ebook_read' && '📚 Membaca E-Book'}
+                                        {activity.type === 'quiz' && <div className="p-2 bg-purple-100 dark:bg-purple-900/20 text-purple-600 rounded-lg"><FaGamepad /></div>}
+                                        {activity.type === 'video_watch' && <div className="p-2 bg-red-100 dark:bg-red-900/20 text-red-600 rounded-lg"><FaVideo /></div>}
+                                        {activity.type === 'ebook_read' && <div className="p-2 bg-blue-100 dark:bg-blue-900/20 text-blue-600 rounded-lg"><FaBook /></div>}
+                                        {activity.type === 'daily_login' && <div className="p-2 bg-green-100 dark:bg-green-900/20 text-green-600 rounded-lg"><FaChartLine /></div>}
+
+                                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                            {activity.type === 'quiz' && 'Menyelesaikan Kuis'}
+                                            {activity.type === 'video_watch' && 'Menonton Video'}
+                                            {activity.type === 'ebook_read' && 'Membaca E-Book'}
+                                            {activity.type === 'daily_login' && 'Login Harian'}
                                         </span>
                                     </div>
                                     <span className="text-sm font-bold text-green-600">+{activity.points} XP</span>

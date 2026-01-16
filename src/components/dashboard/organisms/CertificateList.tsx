@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { FaCertificate, FaDownload, FaCalendarAlt, FaAward, FaSync } from 'react-icons/fa';
 import Link from 'next/link';
+import { Toast } from '@/components/shared/molecules/Toast';
+import { ConfirmationModal } from '@/components/shared/molecules/ConfirmationModal';
 
 interface Certificate {
     id: string;
@@ -16,6 +18,9 @@ interface Certificate {
 export const CertificateList: React.FC = () => {
     const [certificates, setCertificates] = useState<Certificate[]>([]);
     const [loading, setLoading] = useState(true);
+    const [toast, setToast] = useState({ isOpen: false, message: '', type: 'info' as 'success' | 'error' | 'info' });
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedCertId, setSelectedCertId] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchCertificates = async () => {
@@ -35,25 +40,33 @@ export const CertificateList: React.FC = () => {
         fetchCertificates();
     }, []);
 
-    const handleRegenerate = async (id: string) => {
-        if (!confirm('Apakah kamu ingin membuat ulang sertifikat ini dengan Data Profil terbaru?')) return;
+    const handleRegenerateClick = (id: string) => {
+        setSelectedCertId(id);
+        setIsModalOpen(true);
+    };
+
+    const handleConfirmRegenerate = async () => {
+        if (!selectedCertId) return;
 
         try {
-            const res = await fetch(`/api/user/certificates/${id}/regenerate`, {
+            const res = await fetch(`/api/user/certificates/${selectedCertId}/regenerate`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
             });
             if (res.ok) {
                 const data = await res.json();
                 // Update specific certificate URL in state
-                setCertificates(prev => prev.map(c => c.id === id ? { ...c, file_url: data.file_url } : c));
-                alert('Sertifikat berhasil diperbarui!');
+                setCertificates(prev => prev.map(c => c.id === selectedCertId ? { ...c, file_url: data.file_url } : c));
+                setToast({ isOpen: true, message: 'Sertifikat berhasil diperbarui dengan data profil terbaru!', type: 'success' });
             } else {
-                alert('Gagal memperbarui sertifikat.');
+                setToast({ isOpen: true, message: 'Gagal memperbarui sertifikat.', type: 'error' });
             }
         } catch (e) {
             console.error(e);
-            alert('Terjadi kesalahan.');
+            setToast({ isOpen: true, message: 'Terjadi kesalahan saat memproses permintaan.', type: 'error' });
+        } finally {
+            setIsModalOpen(false);
+            setSelectedCertId(null);
         }
     };
 
@@ -122,7 +135,7 @@ export const CertificateList: React.FC = () => {
                                     <FaDownload /> Download PDF
                                 </Link>
                                 <button
-                                    onClick={() => handleRegenerate(cert.id)}
+                                    onClick={() => handleRegenerateClick(cert.id)}
                                     title="Regenerate Certificate with Latest Name"
                                     className="bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 text-gray-600 dark:text-gray-300 p-2.5 rounded-lg transition-colors"
                                 >
@@ -133,6 +146,23 @@ export const CertificateList: React.FC = () => {
                     </div>
                 ))}
             </div>
+
+            <ConfirmationModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                onConfirm={handleConfirmRegenerate}
+                title="Perbarui Sertifikat?"
+                message="Apakah kamu ingin membuat ulang sertifikat ini? Data nama pada sertifikat akan diperbarui sesuai dengan profil akunmu saat ini."
+                confirmText="Ya, Perbarui"
+                cancelText="Batal"
+            />
+
+            <Toast
+                isOpen={toast.isOpen}
+                message={toast.message}
+                type={toast.type}
+                onClose={() => setToast({ ...toast, isOpen: false })}
+            />
         </div>
     );
 };

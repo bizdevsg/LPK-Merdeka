@@ -36,11 +36,18 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
         });
 
         // Format for frontend
-        const formattedQuizzes = quizzes.map((q: any) => ({
-            ...q,
-            attempted: q.quiz_attempts.length > 0,
-            last_score: q.quiz_attempts.length > 0 ? q.quiz_attempts[0].score : null
-        }));
+        const formattedQuizzes = quizzes.map((q: any) => {
+            const attempts = q.quiz_attempts || [];
+            const maxScore = attempts.length > 0
+                ? Math.max(...attempts.map((a: any) => a.score))
+                : null;
+
+            return {
+                ...q,
+                attempted: attempts.length > 0,
+                last_score: maxScore
+            };
+        });
 
         return res.json(serializeBigInt(formattedQuizzes));
     } catch (error) {

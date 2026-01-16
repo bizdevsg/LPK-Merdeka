@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/context/AuthContext';
-import { FaCheckCircle, FaTimesCircle, FaArrowRight, FaClock, FaTrophy, FaArrowLeft } from 'react-icons/fa';
+import { FaCheckCircle, FaTimesCircle, FaArrowRight, FaClock, FaTrophy, FaArrowLeft, FaStar, FaList, FaFlag } from 'react-icons/fa';
 import Link from 'next/link';
+import { QuizSidebar } from '@/components/dashboard/organisms/QuizSidebar';
 
 interface Question {
     id: string;
@@ -28,12 +29,16 @@ export default function QuizPlayer() {
     const { id } = router.query;
     const { isAuthenticated, isPending: authLoading } = useAuth();
 
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
     const [quizState, setQuizState] = useState<'start' | 'playing' | 'submitting' | 'result'>('start');
     const [questions, setQuestions] = useState<Question[]>([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [answers, setAnswers] = useState<Record<string, string>>({});
     const [result, setResult] = useState<any>(null);
+    const [flagged, setFlagged] = useState<Set<number>>(new Set());
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [showReview, setShowReview] = useState(false);
+    const [timeLeft, setTimeLeft] = useState(0); // in seconds
     const [error, setError] = useState('');
 
     useEffect(() => {
@@ -53,12 +58,21 @@ export default function QuizPlayer() {
 
             if (res.ok) {
                 const data = await res.json();
+
+                // Handle new response structure (object with duration)
+                const questionsList = Array.isArray(data) ? data : data.questions;
+                const duration = !Array.isArray(data) ? (data.duration || 30) : 30; // default 30 mins
+
                 // Shuffle options for each question
-                const questionsWithShuffled = data.map((q: Question) => ({
+                const questionsWithShuffled = questionsList.map((q: Question) => ({
                     ...q,
                     shuffledOptions: shuffleArray(JSON.parse(q.options))
                 }));
                 setQuestions(questionsWithShuffled);
+
+                // Set Timer
+                setTimeLeft(duration * 60);
+
                 setQuizState('playing');
                 setCurrentIndex(0);
             } else {
@@ -70,6 +84,39 @@ export default function QuizPlayer() {
         } finally {
             setLoading(false);
         }
+    };
+
+    // Timer Logic
+    useEffect(() => {
+        if (quizState === 'playing' && timeLeft > 0) {
+            const timer = setInterval(() => {
+                setTimeLeft((prev) => {
+                    if (prev <= 1) {
+                        clearInterval(timer);
+                        submitQuiz(); // Auto submit
+                        return 0;
+                    }
+                    return prev - 1;
+                });
+            }, 1000);
+            return () => clearInterval(timer);
+        }
+    }, [quizState, timeLeft]);
+
+    const formatTime = (seconds: number) => {
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        return `${m}:${s < 10 ? '0' : ''}${s}`;
+    };
+
+    const toggleFlag = (idx: number) => {
+        const newFlagged = new Set(flagged);
+        if (newFlagged.has(idx)) {
+            newFlagged.delete(idx);
+        } else {
+            newFlagged.add(idx);
+        }
+        setFlagged(newFlagged);
     };
 
     const handleAnswer = (option: string) => {
@@ -122,7 +169,7 @@ export default function QuizPlayer() {
     if (authLoading) return null;
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 flex flex-col items-center justify-center p-4">
+        <div className={`min-h-screen bg-gray-50 dark:bg-zinc-950 flex flex-col items-center justify-center p-4 transition-all duration-300 ${isSidebarOpen ? 'lg:mr-80' : ''}`}>
             <Head>
                 <title>Quiz | LPK Merdeka</title>
             </Head>
@@ -180,10 +227,32 @@ export default function QuizPlayer() {
 
                         <div className="p-8">
                             <div className="flex justify-between items-center mb-6">
-                                <span className="text-sm font-bold text-gray-400">
-                                    QUESTION {currentIndex + 1} / {questions.length}
-                                </span>
-                                {/* Timer could go here */}
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        onClick={() => setIsSidebarOpen(true)}
+                                        className="p-2 bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 rounded-lg text-gray-700 dark:text-gray-300 transition"
+                                        title="Daftar Soal"
+                                    >
+                                        <FaList />
+                                    </button>
+                                    <span className="text-sm font-bold text-gray-400 border-l border-gray-200 dark:border-zinc-700 pl-3">
+                                        SOAL {currentIndex + 1} / {questions.length}
+                                    </span>
+                                </div>
+
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        onClick={() => toggleFlag(currentIndex)}
+                                        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-bold transition-colors ${flagged.has(currentIndex) ? 'bg-yellow-100 border-yellow-400 text-yellow-700' : 'bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-700 text-gray-500 hover:bg-gray-50'}`}
+                                    >
+                                        <FaFlag className={flagged.has(currentIndex) ? 'text-yellow-600' : 'text-gray-400'} />
+                                        Ragu-ragu
+                                    </button>
+
+                                    <div className={`flex items-center gap-2 font-bold font-mono pl-3 border-l border-gray-200 dark:border-zinc-700 ${timeLeft < 60 ? 'text-red-600 animate-pulse' : 'text-gray-600 dark:text-gray-400'}`}>
+                                        <FaClock /> {formatTime(timeLeft)}
+                                    </div>
+                                </div>
                             </div>
 
                             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-8 leading-relaxed">
@@ -305,8 +374,61 @@ export default function QuizPlayer() {
                         >
                             Kembali ke Dashboard
                         </Link>
+
+                        {/* Review Section */}
+                        {result.results && (
+                            <div className="mt-8 text-left border-t pt-8 border-gray-100 dark:border-zinc-800">
+                                <button
+                                    onClick={() => setShowReview(!showReview)}
+                                    className="w-full bg-gray-50 dark:bg-zinc-800 p-4 rounded-xl font-bold flex justify-between items-center hover:bg-gray-100 transition"
+                                >
+                                    Review Jawaban
+                                    <span>{showReview ? '▲' : '▼'}</span>
+                                </button>
+
+                                {showReview && (
+                                    <div className="mt-4 space-y-4 animate-in slide-in-from-top-4 duration-300">
+                                        {result.results.map((r: any, idx: number) => (
+                                            <div key={idx} className={`p-4 rounded-xl border-l-4 ${r.isCorrect ? 'bg-green-50 dark:bg-green-900/10 border-green-500' : 'bg-red-50 dark:bg-red-900/10 border-red-500'}`}>
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <span className="font-bold text-gray-700 dark:text-gray-300">Soal {idx + 1}</span>
+                                                    {r.isCorrect ? <FaCheckCircle className="text-green-500" /> : <FaTimesCircle className="text-red-500" />}
+                                                </div>
+                                                <div className="prose dark:prose-invert max-w-none text-sm mb-3" dangerouslySetInnerHTML={{ __html: r.content }} />
+
+                                                <div className="text-sm bg-white dark:bg-zinc-900 p-3 rounded-lg border border-gray-100 dark:border-zinc-700">
+                                                    <p className="mb-1 text-gray-500">Jawaban Kamu:</p>
+                                                    <p className={`font-bold ${r.isCorrect ? 'text-green-600' : 'text-red-600'}`}>{r.submittedAnswer || '(Kosong)'}</p>
+
+                                                    {r.isCorrect && r.explanation && (
+                                                        <div className="mt-3 pt-3 border-t border-gray-100 dark:border-zinc-800">
+                                                            <p className="font-bold text-blue-600 flex items-center gap-2 mb-1"><FaStar size={12} /> Penjelasan:</p>
+                                                            <div className="text-gray-600 dark:text-gray-400" dangerouslySetInnerHTML={{ __html: r.explanation }} />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 )}
+
+                <QuizSidebar
+                    totalQuestions={questions.length}
+                    currentIndex={currentIndex}
+                    answers={answers}
+                    questions={questions}
+                    flagged={flagged}
+                    onNavigate={(idx) => {
+                        setCurrentIndex(idx);
+                        // setIsSidebarOpen(false); // Keep open for faster navigation if preferred
+                    }}
+                    isOpen={isSidebarOpen}
+                    onClose={() => setIsSidebarOpen(false)}
+                />
             </div>
         </div>
     );

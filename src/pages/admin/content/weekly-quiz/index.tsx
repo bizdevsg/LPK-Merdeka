@@ -56,7 +56,9 @@ export default function WeeklyQuizManager() {
     const [formStartDate, setFormStartDate] = useState('');
     const [formEndDate, setFormEndDate] = useState('');
     const [formQuestionCount, setFormQuestionCount] = useState<number>(10);
+    const [formDuration, setFormDuration] = useState<number>(30);
     const [formIsActive, setFormIsActive] = useState(true);
+    const [touched, setTouched] = useState<Record<string, boolean>>({});
 
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
@@ -134,9 +136,11 @@ export default function WeeklyQuizManager() {
         setFormStartDate(toInputDate(tomorrow.toISOString()));
         setFormEndDate(toInputDate(nextWeek.toISOString()));
         setFormQuestionCount(10);
+        setFormDuration(30);
         setFormIsActive(true);
 
         setFormMode('create');
+        setTouched({});
         setIsFormOpen(true);
     };
 
@@ -144,12 +148,14 @@ export default function WeeklyQuizManager() {
         setFormId(q.id);
         setFormTitle(q.title);
 
-        let config: { question_count?: number, type_id?: string } = {};
+        let config: { question_count?: number, type_id?: string, duration?: number } = {};
         try {
             config = JSON.parse(q.config || '{}');
             setFormQuestionCount(config.question_count || 10);
+            setFormDuration(config.duration || 30);
         } catch (e) {
             setFormQuestionCount(10);
+            setFormDuration(30);
         }
 
         // Find the type and its category based on q.category.id (which stores type_id in DB relation)
@@ -181,13 +187,16 @@ export default function WeeklyQuizManager() {
         setFormIsActive(q.is_active);
 
         try {
-            const config = JSON.parse(q.config || '{}');
+            config = JSON.parse(q.config || '{}');
             setFormQuestionCount(config.question_count || 10);
+            setFormDuration(config.duration || 30);
         } catch (e) {
             setFormQuestionCount(10);
+            setFormDuration(30);
         }
 
         setFormMode('edit');
+        setTouched({});
         setIsFormOpen(true);
     };
 
@@ -245,7 +254,8 @@ export default function WeeklyQuizManager() {
             is_active: formIsActive,
             config: JSON.stringify({
                 question_count: formQuestionCount,
-                type_id: formType
+                type_id: formType,
+                duration: formDuration
             })
         };
 
@@ -366,28 +376,31 @@ export default function WeeklyQuizManager() {
                                     required
                                     value={formTitle}
                                     onChange={e => setFormTitle(e.target.value)}
-                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 outline-none"
+                                    onBlur={() => setTouched({ ...touched, title: true })}
+                                    className={`w-full border rounded-lg px-3 py-2 outline-none ${touched.title && !formTitle ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-red-500 focus:ring-2'}`}
                                     placeholder="e.g. Weekly Math Challenge #1"
                                 />
+                                {touched.title && !formTitle && <p className="text-xs text-red-600 mt-1">Title is required</p>}
                             </div>
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
                                 <select
                                     required
-                                    value={formSelectedCategory}
                                     onChange={e => {
                                         setFormSelectedCategory(e.target.value);
                                         setFormType(''); // Reset type when category changes
                                         setAvailableQuestions(0);
                                     }}
-                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 outline-none bg-white"
+                                    onBlur={() => setTouched({ ...touched, category: true })}
+                                    className={`w-full border rounded-lg px-3 py-2 outline-none bg-white ${touched.category && !formSelectedCategory ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-red-500 focus:ring-2'}`}
                                 >
                                     <option value="" disabled>Select Category</option>
                                     {categories.map(cat => (
                                         <option key={cat.id} value={cat.id}>{cat.name}</option>
                                     ))}
                                 </select>
+                                {touched.category && !formSelectedCategory && <p className="text-xs text-red-600 mt-1">Category is required</p>}
                             </div>
 
                             <div>
@@ -401,7 +414,8 @@ export default function WeeklyQuizManager() {
                                         const type = types.find(t => t.id === tId);
                                         setAvailableQuestions(type?._count.question_bank || 0);
                                     }}
-                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 outline-none bg-white"
+                                    onBlur={() => setTouched({ ...touched, type: true })}
+                                    className={`w-full border rounded-lg px-3 py-2 outline-none bg-white ${touched.type && !formType ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-red-500 focus:ring-2'}`}
                                     disabled={!formSelectedCategory}
                                 >
                                     <option value="" disabled>Select Type</option>
@@ -416,6 +430,7 @@ export default function WeeklyQuizManager() {
                                 {!formSelectedCategory && (
                                     <p className="text-xs text-gray-500 mt-1">Please select a category first</p>
                                 )}
+                                {touched.type && !formType && <p className="text-xs text-red-600 mt-1">Question Type is required</p>}
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
@@ -426,8 +441,10 @@ export default function WeeklyQuizManager() {
                                         required
                                         value={formStartDate}
                                         onChange={e => setFormStartDate(e.target.value)}
-                                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 outline-none"
+                                        onBlur={() => setTouched({ ...touched, startDate: true })}
+                                        className={`w-full border rounded-lg px-3 py-2 outline-none ${touched.startDate && !formStartDate ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-red-500 focus:ring-2'}`}
                                     />
+                                    {touched.startDate && !formStartDate && <p className="text-xs text-red-600 mt-1">Required</p>}
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
@@ -436,8 +453,10 @@ export default function WeeklyQuizManager() {
                                         required
                                         value={formEndDate}
                                         onChange={e => setFormEndDate(e.target.value)}
-                                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 outline-none"
+                                        onBlur={() => setTouched({ ...touched, endDate: true })}
+                                        className={`w-full border rounded-lg px-3 py-2 outline-none ${touched.endDate && !formEndDate ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-red-500 focus:ring-2'}`}
                                     />
+                                    {touched.endDate && !formEndDate && <p className="text-xs text-red-600 mt-1">Required</p>}
                                 </div>
                             </div>
 
@@ -451,8 +470,8 @@ export default function WeeklyQuizManager() {
                                     value={formQuestionCount}
                                     onChange={e => setFormQuestionCount(parseInt(e.target.value))}
                                     className={`w-full border rounded-lg px-3 py-2 focus:ring-2 outline-none ${formType && formQuestionCount > availableQuestions
-                                            ? 'border-red-500 focus:ring-red-200 text-red-600'
-                                            : 'border-gray-300 focus:ring-red-500'
+                                        ? 'border-red-500 focus:ring-red-200 text-red-600'
+                                        : 'border-gray-300 focus:ring-red-500'
                                         }`}
                                     placeholder="e.g. 10"
                                 />
@@ -463,6 +482,20 @@ export default function WeeklyQuizManager() {
                                 ) : (
                                     <p className="text-xs text-gray-500 mt-1">Random questions will be selected from the type.</p>
                                 )}
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Duration (Minutes)</label>
+                                <select
+                                    required
+                                    value={formDuration}
+                                    onChange={e => setFormDuration(parseInt(e.target.value))}
+                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 outline-none bg-white"
+                                >
+                                    {[30, 60, 90, 120].map(m => (
+                                        <option key={m} value={m}>{m} Minutes</option>
+                                    ))}
+                                </select>
                             </div>
 
                             {formMode === 'edit' && (

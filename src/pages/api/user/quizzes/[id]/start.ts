@@ -35,16 +35,19 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
             return res.status(400).json({ message: 'Quiz is not currently open' });
         }
 
-        if (quiz.quiz_attempts.length > 0) {
-            return res.status(400).json({ message: 'You have already attempted this quiz' });
-        }
+        // Allow retake (remove block)
+        // if (quiz.quiz_attempts.length > 0) {
+        //     return res.status(400).json({ message: 'You have already attempted this quiz' });
+        // }
 
         // 2. Parse Config (optional, for future use)
         let questionCount = 10;
+        let duration = 30;
         let config: any = {};
         try {
             config = JSON.parse(quiz.config || '{}');
             if (config.question_count) questionCount = config.question_count;
+            if (config.duration) duration = config.duration;
         } catch (e) { }
 
         // 3. Fetch Questions from quiz_question_order (ordered questions)
@@ -87,13 +90,19 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
                 return res.status(500).json({ message: 'No questions available for this quiz' });
             }
 
-            return res.json(serializeBigInt(questions));
+            return res.json({
+                questions: serializeBigInt(questions),
+                duration
+            });
         }
 
         // 4. Extract questions in order
         const selected = questionOrders.map((qo: any) => qo.question);
 
-        return res.json(serializeBigInt(selected));
+        return res.json({
+            questions: serializeBigInt(selected),
+            duration
+        });
 
     } catch (error) {
         console.error(error);

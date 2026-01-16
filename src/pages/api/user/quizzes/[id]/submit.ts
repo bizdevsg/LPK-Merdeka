@@ -35,9 +35,10 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
         });
 
         if (!quiz) return res.status(404).json({ message: 'Quiz not found' });
-        if (quiz.quiz_attempts.length > 0) {
-            return res.status(400).json({ message: 'You have already submitted this quiz' });
-        }
+        // Allow retake
+        // if (quiz.quiz_attempts.length > 0) {
+        //     return res.status(400).json({ message: 'You have already submitted this quiz' });
+        // }
 
         // 2. Fetch Questions to Check Answers
         const questionIds = Object.keys(answers).map(qid => BigInt(qid));
@@ -60,10 +61,22 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
 
         const score = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
 
-        // 4. Calculate XP Points
-        // 10 points per correct answer + 50 bonus for 100 score
-        let earnedPoints = (correctCount * 10);
-        if (score === 100) earnedPoints += 50;
+        // 4. Calculate XP Points (Delta Logic for Retakes)
+        // Max Points = (Questions * 10) + 50 Bonus (if all correct)
+
+        const calculatePoints = (s: number, totalQ: number) => {
+            const cCount = Math.round((s / 100) * totalQ);
+            let pts = cCount * 10;
+            if (s === 100) pts += 50;
+            return pts;
+        };
+
+        const maxScoreBefore = quiz.quiz_attempts.reduce((max: number, att: any) => Math.max(max, att.score), 0);
+        const prevMaxPoints = calculatePoints(maxScoreBefore, totalQuestions);
+        const currentPoints = calculatePoints(score, totalQuestions);
+
+        // Only award points that exceed previous maximum achievement
+        let earnedPoints = Math.max(0, currentPoints - prevMaxPoints);
 
         let certificateUrl = null;
 
@@ -87,7 +100,9 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
 
         // 7. Generate Certificate if Score >= 70 (Passing Grade)
         if (score >= 70) {
-            const certCode = `CERT-${userId}-${id}-${Date.now()}`;
+            // Shorten code to fit VARCHAR(50)
+            const shortUid = userId?.substring(0, 8);
+            const certCode = `CERT-${id}-${shortUid}-${Date.now()}`;
             certificateUrl = await CertificateGenerator.generate(
                 req.user?.name || 'Peserta',
                 quiz.title,
@@ -96,16 +111,42 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
             );
 
             if (certificateUrl) {
-                await prisma.certificates.create({
-                    data: {
-                        user_id: userId,
-                        quiz_id: BigInt(String(id)),
-                        certificate_code: certCode,
-                        file_url: certificateUrl
-                    }
+                // Check if certificate already exists to prevent duplicates
+                const existingCert = await prisma.certificates.findFirst({
+                    where: { user_id: userId, quiz_id: BigInt(String(id)) }
                 });
+
+                if (!existingCert) {
+                    await prisma.certificates.create({
+                        data: {
+                            user_id: userId,
+                            quiz_id: BigInt(String(id)),
+                            certificate_code: certCode,
+                            file_url: certificateUrl
+                        }
+                    });
+                } else {
+                    // Optionally update existing cert? For now, keep the first one.
+                    certificateUrl = existingCert.file_url;
+                }
             }
         }
+
+        // Prepare detailed results for review
+        const results = questions.map((q: any) => {
+            const submittedAnswer = answers[String(q.id)];
+            const isCorrect = submittedAnswer === q.correct_answer;
+            return {
+                id: q.id,
+                content: q.content,
+                options: q.options,
+                submittedAnswer,
+                isCorrect,
+                // Only reveal correct answer and explanation if the user got it right
+                correctAnswer: isCorrect ? q.correct_answer : null,
+                explanation: isCorrect ? q.explanation : null
+            };
+        });
 
         return res.json({
             message: 'Quiz submitted successfully',
@@ -113,7 +154,8 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
             correctCount,
             totalQuestions,
             earnedPoints,
-            certificateUrl
+            certificateUrl,
+            results: serializeBigInt(results)
         });
 
     } catch (error) {

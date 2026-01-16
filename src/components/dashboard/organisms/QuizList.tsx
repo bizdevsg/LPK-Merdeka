@@ -111,12 +111,19 @@ export const QuizList: React.FC = () => {
 
                             <div>
                                 {quiz.attempted ? (
-                                    <div className="bg-gray-50 dark:bg-zinc-800 rounded-lg p-4 flex justify-between items-center">
-                                        <span className="text-gray-600 dark:text-gray-400 font-medium">Skor Kamu</span>
-                                        <span className={`text-2xl font-bold ${(quiz.last_score || 0) >= 70 ? 'text-green-600' : 'text-orange-500'
-                                            }`}>
-                                            {quiz.last_score} / 100
-                                        </span>
+                                    <div className="space-y-3">
+                                        <div className="bg-gray-50 dark:bg-zinc-800 rounded-lg p-4 flex justify-between items-center">
+                                            <span className="text-gray-600 dark:text-gray-400 font-medium">Skor Terakhir</span>
+                                            <span className={`text-2xl font-bold ${(quiz.last_score || 0) >= 70 ? 'text-green-600' : 'text-orange-500'}`}>
+                                                {quiz.last_score} / 100
+                                            </span>
+                                        </div>
+                                        <Link
+                                            href={`/dashboard/quiz/${quiz.id}`}
+                                            className="w-full block bg-white border border-red-200 hover:border-red-300 text-red-600 hover:bg-red-50 text-center font-medium py-2.5 rounded-lg transition-colors shadow-sm flex items-center justify-center gap-2"
+                                        >
+                                            <FaArrowRight size={14} /> Ulangi Kuis
+                                        </Link>
                                     </div>
                                 ) : (
                                     <Link
