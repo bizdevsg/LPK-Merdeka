@@ -48,3 +48,5 @@ next-env.d.ts
 
 # User Uploads
 /public/uploads
+
+/scripts/seed.ts
