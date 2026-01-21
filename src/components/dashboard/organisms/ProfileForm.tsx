@@ -244,7 +244,9 @@ export const ProfileForm = () => {
 
                     <div className="text-center md:text-left">
                         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Edit Profile</h2>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Lengkapi data diri anda untuk mengakses fitur lainnya.</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                            Lengkapi data diri Anda untuk mengakses <strong className="text-red-600">Pusat Belajar</strong>
+                        </p>
                         {uploading && !showCropModal && <p className="text-xs text-blue-500 mt-1">Mengunggah foto...</p>}
                     </div>
                 </div>

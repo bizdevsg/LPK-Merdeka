@@ -4,7 +4,7 @@ import {
     FaUser, FaCertificate, FaHistory, FaTrophy,
     FaBook, FaFileAlt, FaVideo, FaGamepad, FaPuzzlePiece,
     FaChevronDown, FaChevronRight, FaCalendarCheck,
-    FaSignOutAlt, FaInfoCircle, FaHome, FaChevronLeft
+    FaSignOutAlt, FaInfoCircle, FaHome, FaChevronLeft, FaLock
 } from "react-icons/fa";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/router";
@@ -27,6 +27,7 @@ interface DashboardSidebarProps {
     onClose?: () => void;
     isCollapsed?: boolean;
     onToggleCollapse?: () => void;
+    userProfile?: any;
 }
 
 export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
@@ -35,10 +36,19 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
     isOpen,
     onClose,
     isCollapsed = false,
-    onToggleCollapse
+    onToggleCollapse,
+    userProfile
 }) => {
-    const { logout } = useAuth();
+    const { logout, user } = useAuth();
     const router = useRouter();
+
+    // Define learning center tabs that require complete profile
+    const LEARNING_CENTER_TABS = ['absensi', 'artikel', 'materi', 'video', 'kuis'];
+
+    // Check if profile is complete
+    const u = userProfile || user;
+    const isAdmin = u?.role === 'admin' || u?.role === 'superAdmin';
+    const isProfileComplete = isAdmin || (u?.name && u?.gender && u?.birthDate && u?.address && u?.phoneNumber);
 
     const menuGroups: SidebarGroup[] = [
         {
@@ -136,27 +146,45 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
                             )}
 
                             <div className={`space-y-1 transition-all duration-300 overflow-hidden ${(!isCollapsed && collapsedGroups[group.title]) ? 'max-h-0 opacity-0' : 'max-h-[500px] opacity-100'}`}>
-                                {group.items.map((item) => (
-                                    <button
-                                        key={item.id}
-                                        onClick={() => {
-                                            onTabChange(item.id);
-                                            if (window.innerWidth < 768 && onClose) onClose();
-                                        }}
-                                        title={isCollapsed ? item.label : undefined}
-                                        className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'px-3 gap-3'} py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${activeTab === item.id
-                                            ? "bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400"
-                                            : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-zinc-800 hover:text-gray-900 dark:hover:text-white"
-                                            }`}
-                                    >
-                                        <span className={`text-lg transition-colors duration-200 flex-shrink-0 ${activeTab === item.id ? "text-red-600 dark:text-red-400" : "text-gray-400 group-hover:text-gray-600"}`}>
-                                            {item.icon}
-                                        </span>
-                                        <span className={`whitespace-nowrap overflow-hidden transition-all duration-300 ${isCollapsed ? 'w-0 opacity-0 hidden' : 'w-auto opacity-100'}`}>
-                                            {item.label}
-                                        </span>
-                                    </button>
-                                ))}
+                                {group.items.map((item) => {
+                                    const isLocked = !isProfileComplete && LEARNING_CENTER_TABS.includes(item.id);
+                                    const tooltipText = isLocked ? 'Lengkapi profil untuk mengakses' : (isCollapsed ? item.label : undefined);
+
+                                    return (
+                                        <button
+                                            key={item.id}
+                                            onClick={() => {
+                                                if (!isLocked) {
+                                                    onTabChange(item.id);
+                                                    if (window.innerWidth < 768 && onClose) onClose();
+                                                }
+                                            }}
+                                            disabled={isLocked}
+                                            title={tooltipText}
+                                            className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'px-3 gap-3'} py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${isLocked
+                                                    ? 'opacity-50 cursor-not-allowed bg-gray-50 dark:bg-zinc-800/50'
+                                                    : activeTab === item.id
+                                                        ? "bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400"
+                                                        : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-zinc-800 hover:text-gray-900 dark:hover:text-white"
+                                                } ${isLocked ? 'relative group/locked' : ''}`}
+                                        >
+                                            <span className={`text-lg transition-colors duration-200 flex-shrink-0 ${activeTab === item.id ? "text-red-600 dark:text-red-400" : "text-gray-400 group-hover:text-gray-600"}`}>
+                                                {item.icon}
+                                            </span>
+                                            <span className={`whitespace-nowrap overflow-hidden transition-all duration-300 ${isCollapsed ? 'w-0 opacity-0 hidden' : 'w-auto opacity-100 flex-1 text-left'}`}>
+                                                {item.label}
+                                            </span>
+                                            {isLocked && !isCollapsed && (
+                                                <FaLock className="text-xs text-red-500 flex-shrink-0" />
+                                            )}
+                                            {isLocked && isCollapsed && (
+                                                <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full flex items-center justify-center">
+                                                    <FaLock className="text-[6px] text-white" />
+                                                </div>
+                                            )}
+                                        </button>
+                                    );
+                                })}
                             </div>
                         </div>
                     ))}
