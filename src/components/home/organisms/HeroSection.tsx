@@ -73,7 +73,7 @@ export const HeroSection = () => {
             {title.includes(',') ? (
               <>
                 {title.split(',')[0]}, <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-pink-600">
+                <span className="text-transparent bg-clip-text bg-red-600">
                   {title.split(',')[1]?.trim() || ''}
                 </span>
               </>

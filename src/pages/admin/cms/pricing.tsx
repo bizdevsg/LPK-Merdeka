@@ -20,31 +20,6 @@ export default function CMSPricing() {
                         <p className="text-gray-500 max-w-md mx-auto">
                             Halaman CMS untuk mengelola konten Biaya & Persyaratan sedang dalam pengembangan.
                         </p>
-
-                        <div className="mt-8 p-6 bg-gray-50 rounded-xl border border-gray-100 max-w-lg mx-auto text-left">
-                            <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                                <FaMoneyBillWave className="text-green-600" />
-                                Fitur yang akan tersedia:
-                            </h3>
-                            <ul className="text-sm text-gray-600 space-y-2">
-                                <li className="flex items-start gap-2">
-                                    <span className="text-green-500 mt-1">✓</span>
-                                    <span>Pengelolaan paket harga pelatihan</span>
-                                </li>
-                                <li className="flex items-start gap-2">
-                                    <span className="text-green-500 mt-1">✓</span>
-                                    <span>Daftar persyaratan pendaftaran</span>
-                                </li>
-                                <li className="flex items-start gap-2">
-                                    <span className="text-green-500 mt-1">✓</span>
-                                    <span>Informasi promo dan diskon</span>
-                                </li>
-                                <li className="flex items-start gap-2">
-                                    <span className="text-green-500 mt-1">✓</span>
-                                    <span>FAQ terkait biaya</span>
-                                </li>
-                            </ul>
-                        </div>
                     </div>
                 </div>
             </div>
