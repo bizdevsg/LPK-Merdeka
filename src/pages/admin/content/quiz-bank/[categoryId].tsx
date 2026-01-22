@@ -107,8 +107,44 @@ export default function CategoryTypes() {
         }
     };
 
+    const [errors, setErrors] = useState<{ name: string }>({ name: '' });
+
+    const validateField = (name: string, value: string) => {
+        let error = '';
+        if (name === 'name' && !value.trim()) {
+            error = 'Type name is required';
+        }
+        setErrors(prev => ({ ...prev, [name]: error }));
+        return error === '';
+    };
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+
+        if (name === 'name') {
+            validateField(name, value);
+        }
+    };
+
+    const isFormValid = () => {
+        return (
+            formData.name.trim() !== '' &&
+            !errors.name
+        );
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Final validation
+        const isNameValid = validateField('name', formData.name);
+
+        if (!isNameValid) {
+            setToast({ isOpen: true, message: 'Please fix errors.', type: 'error' });
+            return;
+        }
+
         const url = formMode === 'create'
             ? '/api/admin/content/quiz-bank/types'
             : `/api/admin/content/quiz-bank/types/${formData.id}`;
@@ -226,15 +262,17 @@ export default function CategoryTypes() {
                         </h3>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Type Name</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Type Name <span className="text-red-500">*</span></label>
                                 <input
                                     type="text"
+                                    name="name"
                                     required
                                     value={formData.name}
-                                    onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 outline-none"
+                                    onChange={handleInputChange}
+                                    className={`w-full border rounded-lg px-3 py-2 focus:ring-2 outline-none ${errors.name ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-red-500'}`}
                                     placeholder="e.g. Multiple Choice"
                                 />
+                                {errors.name && <p className="text-xs text-red-600 mt-1">{errors.name}</p>}
                             </div>
                             <div className="flex justify-end gap-3 pt-4">
                                 <button
@@ -246,7 +284,8 @@ export default function CategoryTypes() {
                                 </button>
                                 <button
                                     type="submit"
-                                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                                    disabled={!isFormValid()}
+                                    className={`px-4 py-2 text-white rounded-lg transition ${!isFormValid() ? 'bg-gray-300 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'}`}
                                 >
                                     Save
                                 </button>

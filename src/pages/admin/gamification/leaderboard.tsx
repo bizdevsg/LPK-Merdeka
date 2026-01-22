@@ -61,7 +61,7 @@ export default function AdminLeaderboard() {
                             <tr>
                                 <th className="px-6 py-4">Rank</th>
                                 <th className="px-6 py-4">User</th>
-                                <th className="px-6 py-4">Questions</th>
+                                <th className="px-6 py-4">Role</th>
                                 <th className="px-6 py-4 text-center">Level</th>
                                 <th className="px-6 py-4 text-right">Total Points</th>
                             </tr>
@@ -84,9 +84,9 @@ export default function AdminLeaderboard() {
                                     <tr key={entry.user_id} className="hover:bg-gray-50 transition-colors">
                                         <td className="px-6 py-4">
                                             <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${entry.rank === 1 ? 'bg-yellow-100 text-yellow-600' :
-                                                    entry.rank === 2 ? 'bg-gray-200 text-gray-600' :
-                                                        entry.rank === 3 ? 'bg-orange-100 text-orange-600' :
-                                                            'text-gray-500'
+                                                entry.rank === 2 ? 'bg-gray-200 text-gray-600' :
+                                                    entry.rank === 3 ? 'bg-orange-100 text-orange-600' :
+                                                        'text-gray-500'
                                                 }`}>
                                                 {entry.rank}
                                             </div>

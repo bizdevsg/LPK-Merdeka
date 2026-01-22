@@ -99,8 +99,44 @@ export default function QuizBankIndex() {
         }
     };
 
+    const [errors, setErrors] = useState<{ name: string }>({ name: '' });
+
+    const validateField = (name: string, value: string) => {
+        let error = '';
+        if (name === 'name' && !value.trim()) {
+            error = 'Category name is required';
+        }
+        setErrors(prev => ({ ...prev, [name]: error }));
+        return error === '';
+    };
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+
+        if (name === 'name') {
+            validateField(name, value);
+        }
+    };
+
+    const isFormValid = () => {
+        return (
+            formData.name.trim() !== '' &&
+            !errors.name
+        );
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Final validation
+        const isNameValid = validateField('name', formData.name);
+
+        if (!isNameValid) {
+            setToast({ isOpen: true, message: 'Please fix errors.', type: 'error' });
+            return;
+        }
+
         const url = formMode === 'create'
             ? '/api/admin/content/quiz-bank/categories'
             : `/api/admin/content/quiz-bank/categories/${formData.id}`;
@@ -209,24 +245,25 @@ export default function QuizBankIndex() {
                         </h3>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Category Name</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Category Name <span className="text-red-500">*</span></label>
                                 <input
                                     type="text"
+                                    name="name"
                                     required
                                     value={formData.name}
-                                    onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                    onBlur={() => setTouched({ ...touched, name: true })}
-                                    className={`w-full border rounded-lg px-3 py-2 outline-none ${touched.name && !formData.name ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-red-500 focus:ring-2'}`}
+                                    onChange={handleInputChange}
+                                    className={`w-full border rounded-lg px-3 py-2 outline-none ${errors.name ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-red-500 focus:ring-2'}`}
                                     placeholder="e.g. History"
                                 />
-                                {touched.name && !formData.name && <p className="text-xs text-red-600 mt-1">Category name is required</p>}
+                                {errors.name && <p className="text-xs text-red-600 mt-1">{errors.name}</p>}
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                                 <textarea
                                     rows={3}
+                                    name="description"
                                     value={formData.description}
-                                    onChange={e => setFormData({ ...formData, description: e.target.value })}
+                                    onChange={handleInputChange}
                                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 outline-none"
                                     placeholder="Category description..."
                                 />
@@ -241,7 +278,8 @@ export default function QuizBankIndex() {
                                 </button>
                                 <button
                                     type="submit"
-                                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                                    disabled={!isFormValid()}
+                                    className={`px-4 py-2 text-white rounded-lg transition ${!isFormValid() ? 'bg-gray-300 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'}`}
                                 >
                                     Save
                                 </button>

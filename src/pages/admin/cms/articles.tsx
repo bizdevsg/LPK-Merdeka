@@ -142,11 +142,54 @@ export default function CMSArticles() {
         setIsFormOpen(true);
     };
 
+    const [errors, setErrors] = useState({ title: '', content: '' });
+
+    const validateField = (name: string, value: string) => {
+        let error = '';
+        if (name === 'title' && !value.trim()) {
+            error = 'Title is required';
+        } else if (name === 'content' && !value.trim()) {
+            error = 'Content is required';
+        }
+        setErrors(prev => ({ ...prev, [name]: error }));
+        return error === '';
+    };
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        const { name, value } = e.target;
+        // Handle checkbox separately if needed, but here simple inputs
+        setFormData(prev => ({ ...prev, [name]: value }));
+
+        if (name === 'title' || name === 'content') {
+            validateField(name, value);
+        }
+    };
+
+    const isFormValid = () => {
+        return (
+            formData.title.trim() !== '' &&
+            formData.content.trim() !== '' &&
+            !errors.title &&
+            !errors.content
+        );
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Final validation
+        const isTitleValid = validateField('title', formData.title);
+        const isContentValid = validateField('content', formData.content);
+
+        if (!isTitleValid || !isContentValid) {
+            setToast({ isOpen: true, message: 'Please fill in all required fields.', type: 'error' });
+            return;
+        }
+
         const url = formMode === 'create' ? '/api/admin/cms/articles' : `/api/admin/cms/articles/${formData.id}`;
         const method = formMode === 'create' ? 'POST' : 'PUT';
 
+        // ... (date logic)
         let finalPublishedAt = null;
 
         if (formData.publish_now) {
@@ -157,7 +200,7 @@ export default function CMSArticles() {
 
         const payload = {
             ...formData,
-            is_published: true, // Always enforce active status when saving from this form
+            is_published: true,
             published_at: finalPublishedAt
         };
 
@@ -309,37 +352,42 @@ export default function CMSArticles() {
                         </div>
                         <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Title <span className="text-red-500">*</span></label>
                                 <input
                                     type="text"
+                                    name="title"
                                     required
                                     value={formData.title}
-                                    onChange={e => setFormData({ ...formData, title: e.target.value })}
-                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 outline-none"
+                                    onChange={handleInputChange}
+                                    className={`w-full border rounded-lg px-3 py-2 focus:ring-2 outline-none ${errors.title ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-red-500'}`}
                                 />
+                                {errors.title && <p className="text-xs text-red-500 mt-1">{errors.title}</p>}
                             </div>
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Excerpt (Summary)</label>
                                 <textarea
+                                    name="excerpt"
                                     rows={2}
                                     value={formData.excerpt}
-                                    onChange={e => setFormData({ ...formData, excerpt: e.target.value })}
+                                    onChange={handleInputChange}
                                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 outline-none"
                                     placeholder="Short summary..."
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Content *</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Content <span className="text-red-500">*</span></label>
                                 <textarea
+                                    name="content"
                                     required
                                     rows={8}
                                     value={formData.content}
-                                    onChange={e => setFormData({ ...formData, content: e.target.value })}
-                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 outline-none font-mono text-sm"
+                                    onChange={handleInputChange}
+                                    className={`w-full border rounded-lg px-3 py-2 focus:ring-2 outline-none font-mono text-sm ${errors.content ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-red-500'}`}
                                     placeholder="Article content..."
                                 />
+                                {errors.content && <p className="text-xs text-red-500 mt-1">{errors.content}</p>}
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
@@ -347,8 +395,9 @@ export default function CMSArticles() {
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Thumbnail URL</label>
                                     <input
                                         type="text"
+                                        name="thumbnail_url"
                                         value={formData.thumbnail_url}
-                                        onChange={e => setFormData({ ...formData, thumbnail_url: e.target.value })}
+                                        onChange={handleInputChange}
                                         className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 outline-none"
                                         placeholder="https://..."
                                     />
@@ -357,8 +406,9 @@ export default function CMSArticles() {
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Author</label>
                                     <input
                                         type="text"
+                                        name="author"
                                         value={formData.author}
-                                        onChange={e => setFormData({ ...formData, author: e.target.value })}
+                                        onChange={handleInputChange}
                                         className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 outline-none"
                                     />
                                 </div>
@@ -417,7 +467,8 @@ export default function CMSArticles() {
                                 </button>
                                 <button
                                     type="submit"
-                                    className="px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700"
+                                    disabled={!isFormValid()}
+                                    className={`px-4 py-2 text-white rounded-lg font-medium transition ${!isFormValid() ? 'bg-gray-300 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'}`}
                                 >
                                     {formMode === 'create' ? 'Create' : 'Update'}
                                 </button>

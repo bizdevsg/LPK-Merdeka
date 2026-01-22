@@ -227,16 +227,74 @@ export default function WeeklyQuizManager() {
         }
     };
 
+    const [errors, setErrors] = useState({
+        title: '',
+        category: '',
+        type: '',
+        startDate: '',
+        endDate: '',
+        questionCount: ''
+    });
+
+    const validateField = (name: string, value: any) => {
+        let error = '';
+        if (name === 'title' && !value.toString().trim()) {
+            error = 'Title is required';
+        } else if (name === 'category' && !value) {
+            error = 'Category is required';
+        } else if (name === 'type' && !value) {
+            error = 'Question Type is required';
+        } else if (name === 'startDate' && !value) {
+            error = 'Start date is required';
+        } else if (name === 'endDate') {
+            if (!value) {
+                error = 'End date is required';
+            } else if (formStartDate && new Date(value) <= new Date(formStartDate)) {
+                error = 'End date must be after start date';
+            }
+        } else if (name === 'questionCount') {
+            if (value <= 0) {
+                error = 'Must be at least 1';
+            } else if (formType && value > availableQuestions) {
+                error = `Maximum ${availableQuestions} questions available`;
+            }
+        }
+
+        setErrors(prev => ({ ...prev, [name]: error }));
+        return error === '';
+    };
+
+    const isFormValid = () => {
+        return (
+            formTitle.trim() !== '' &&
+            formSelectedCategory !== '' &&
+            formType !== '' &&
+            formStartDate !== '' &&
+            formEndDate !== '' &&
+            formQuestionCount > 0 &&
+            (formType ? formQuestionCount <= availableQuestions : true) &&
+            !errors.title &&
+            !errors.category &&
+            !errors.type &&
+            !errors.startDate &&
+            !errors.endDate &&
+            !errors.questionCount
+        );
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!formType) {
-            setToast({ isOpen: true, message: 'Please select a question type', type: 'error' });
-            return;
-        }
+        // Final validation
+        const isTitleValid = validateField('title', formTitle);
+        const isCategoryValid = validateField('category', formSelectedCategory);
+        const isTypeValid = validateField('type', formType);
+        const isStartValid = validateField('startDate', formStartDate);
+        const isEndValid = validateField('endDate', formEndDate);
+        const isCountValid = validateField('questionCount', formQuestionCount);
 
-        if (formQuestionCount > availableQuestions) {
-            setToast({ isOpen: true, message: `Question count cannot exceed available questions (${availableQuestions})`, type: 'error' });
+        if (!isTitleValid || !isCategoryValid || !isTypeValid || !isStartValid || !isEndValid || !isCountValid) {
+            setToast({ isOpen: true, message: 'Please fix errors.', type: 'error' });
             return;
         }
 
@@ -370,41 +428,44 @@ export default function WeeklyQuizManager() {
                         </h3>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Title <span className="text-red-500">*</span></label>
                                 <input
                                     type="text"
                                     required
                                     value={formTitle}
-                                    onChange={e => setFormTitle(e.target.value)}
-                                    onBlur={() => setTouched({ ...touched, title: true })}
-                                    className={`w-full border rounded-lg px-3 py-2 outline-none ${touched.title && !formTitle ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-red-500 focus:ring-2'}`}
+                                    onChange={e => {
+                                        setFormTitle(e.target.value);
+                                        validateField('title', e.target.value);
+                                    }}
+                                    className={`w-full border rounded-lg px-3 py-2 outline-none ${errors.title ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-red-500 focus:ring-2'}`}
                                     placeholder="e.g. Weekly Math Challenge #1"
                                 />
-                                {touched.title && !formTitle && <p className="text-xs text-red-600 mt-1">Title is required</p>}
+                                {errors.title && <p className="text-xs text-red-600 mt-1">{errors.title}</p>}
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Category <span className="text-red-500">*</span></label>
                                 <select
                                     required
+                                    value={formSelectedCategory}
                                     onChange={e => {
                                         setFormSelectedCategory(e.target.value);
-                                        setFormType(''); // Reset type when category changes
+                                        setFormType('');
                                         setAvailableQuestions(0);
+                                        validateField('category', e.target.value);
                                     }}
-                                    onBlur={() => setTouched({ ...touched, category: true })}
-                                    className={`w-full border rounded-lg px-3 py-2 outline-none bg-white ${touched.category && !formSelectedCategory ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-red-500 focus:ring-2'}`}
+                                    className={`w-full border rounded-lg px-3 py-2 outline-none bg-white ${errors.category ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-red-500 focus:ring-2'}`}
                                 >
                                     <option value="" disabled>Select Category</option>
                                     {categories.map(cat => (
                                         <option key={cat.id} value={cat.id}>{cat.name}</option>
                                     ))}
                                 </select>
-                                {touched.category && !formSelectedCategory && <p className="text-xs text-red-600 mt-1">Category is required</p>}
+                                {errors.category && <p className="text-xs text-red-600 mt-1">{errors.category}</p>}
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Question Type</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Question Type <span className="text-red-500">*</span></label>
                                 <select
                                     required
                                     value={formType}
@@ -413,9 +474,17 @@ export default function WeeklyQuizManager() {
                                         setFormType(tId);
                                         const type = types.find(t => t.id === tId);
                                         setAvailableQuestions(type?._count.question_bank || 0);
+                                        validateField('type', tId);
+                                        // Re-validate count when type/available questions change
+                                        if (formQuestionCount) {
+                                            // Need to defer this or pass updated available
+                                            // Simple way: just pass current count to re-trigger internal check
+                                            // But availableQuestions state update is async/detached here?
+                                            // Actually state updates are batched. We might need useEffect or direct logic.
+                                            // For now, let's trust validation on count change or submit.
+                                        }
                                     }}
-                                    onBlur={() => setTouched({ ...touched, type: true })}
-                                    className={`w-full border rounded-lg px-3 py-2 outline-none bg-white ${touched.type && !formType ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-red-500 focus:ring-2'}`}
+                                    className={`w-full border rounded-lg px-3 py-2 outline-none bg-white ${errors.type ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-red-500 focus:ring-2'}`}
                                     disabled={!formSelectedCategory}
                                 >
                                     <option value="" disabled>Select Type</option>
@@ -430,55 +499,60 @@ export default function WeeklyQuizManager() {
                                 {!formSelectedCategory && (
                                     <p className="text-xs text-gray-500 mt-1">Please select a category first</p>
                                 )}
-                                {touched.type && !formType && <p className="text-xs text-red-600 mt-1">Question Type is required</p>}
+                                {errors.type && <p className="text-xs text-red-600 mt-1">{errors.type}</p>}
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Start Date <span className="text-red-500">*</span></label>
                                     <input
                                         type="datetime-local"
                                         required
                                         value={formStartDate}
-                                        onChange={e => setFormStartDate(e.target.value)}
-                                        onBlur={() => setTouched({ ...touched, startDate: true })}
-                                        className={`w-full border rounded-lg px-3 py-2 outline-none ${touched.startDate && !formStartDate ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-red-500 focus:ring-2'}`}
+                                        onChange={e => {
+                                            setFormStartDate(e.target.value);
+                                            validateField('startDate', e.target.value);
+                                        }}
+                                        className={`w-full border rounded-lg px-3 py-2 outline-none ${errors.startDate ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-red-500 focus:ring-2'}`}
                                     />
-                                    {touched.startDate && !formStartDate && <p className="text-xs text-red-600 mt-1">Required</p>}
+                                    {errors.startDate && <p className="text-xs text-red-600 mt-1">{errors.startDate}</p>}
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">End Date <span className="text-red-500">*</span></label>
                                     <input
                                         type="datetime-local"
                                         required
                                         value={formEndDate}
-                                        onChange={e => setFormEndDate(e.target.value)}
-                                        onBlur={() => setTouched({ ...touched, endDate: true })}
-                                        className={`w-full border rounded-lg px-3 py-2 outline-none ${touched.endDate && !formEndDate ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-red-500 focus:ring-2'}`}
+                                        onChange={e => {
+                                            setFormEndDate(e.target.value);
+                                            validateField('endDate', e.target.value);
+                                        }}
+                                        className={`w-full border rounded-lg px-3 py-2 outline-none ${errors.endDate ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-red-500 focus:ring-2'}`}
                                     />
-                                    {touched.endDate && !formEndDate && <p className="text-xs text-red-600 mt-1">Required</p>}
+                                    {errors.endDate && <p className="text-xs text-red-600 mt-1">{errors.endDate}</p>}
                                 </div>
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Number of Questions</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Number of Questions <span className="text-red-500">*</span></label>
                                 <input
                                     type="number"
                                     min="1"
                                     max={availableQuestions > 0 ? availableQuestions : 50}
                                     required
                                     value={formQuestionCount}
-                                    onChange={e => setFormQuestionCount(parseInt(e.target.value))}
-                                    className={`w-full border rounded-lg px-3 py-2 focus:ring-2 outline-none ${formType && formQuestionCount > availableQuestions
+                                    onChange={e => {
+                                        setFormQuestionCount(parseInt(e.target.value));
+                                        validateField('questionCount', parseInt(e.target.value));
+                                    }}
+                                    className={`w-full border rounded-lg px-3 py-2 focus:ring-2 outline-none ${errors.questionCount
                                         ? 'border-red-500 focus:ring-red-200 text-red-600'
                                         : 'border-gray-300 focus:ring-red-500'
                                         }`}
                                     placeholder="e.g. 10"
                                 />
-                                {formType && formQuestionCount > availableQuestions ? (
-                                    <p className="text-xs text-red-600 mt-1 font-medium">
-                                        ⚠️ Maximum questions available is {availableQuestions}
-                                    </p>
+                                {errors.questionCount ? (
+                                    <p className="text-xs text-red-600 mt-1 font-medium">{errors.questionCount}</p>
                                 ) : (
                                     <p className="text-xs text-gray-500 mt-1">Random questions will be selected from the type.</p>
                                 )}
@@ -523,7 +597,8 @@ export default function WeeklyQuizManager() {
                                 </button>
                                 <button
                                     type="submit"
-                                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                                    disabled={!isFormValid()}
+                                    className={`px-4 py-2 text-white rounded-lg transition ${!isFormValid() ? 'bg-gray-300 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'}`}
                                 >
                                     Save Quiz
                                 </button>

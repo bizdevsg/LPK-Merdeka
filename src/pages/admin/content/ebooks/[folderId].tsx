@@ -175,14 +175,59 @@ export default function FolderEbooks() {
         }
     };
 
+    const [errors, setErrors] = useState({ title: '', file_url: '' });
+
+    const validateField = (name: string, value: string) => {
+        let error = '';
+        if (name === 'title' && !value.trim()) {
+            error = 'Title is required';
+        } else if (name === 'file_url') {
+            if (!value.trim()) {
+                error = 'PDF URL is required';
+            } else if (!/(drive\.google\.com|docs\.google\.com)/.test(value)) {
+                error = 'Invalid URL! Only Google Drive links are allowed.';
+            }
+        }
+        setErrors(prev => ({ ...prev, [name]: error }));
+        return error === '';
+    };
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name === 'file_url' ? 'file_url' : name]: value }));
+
+        if (name === 'title' || name === 'file_url') {
+            validateField(name, value);
+        }
+    };
+
+    const isFormValid = () => {
+        return (
+            formData.title.trim() !== '' &&
+            formData.file_url.trim() !== '' &&
+            !errors.title &&
+            !errors.file_url
+        );
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Final validation check
+        const isTitleValid = validateField('title', formData.title);
+        const isUrlValid = validateField('file_url', formData.file_url);
+
+        if (!isTitleValid || !isUrlValid) {
+            setToast({ isOpen: true, message: 'Please fix the errors in the form.', type: 'error' });
+            return;
+        }
+
         const url = formMode === 'create' ? '/api/admin/content/ebooks' : `/api/admin/content/ebooks/${formData.id}`;
         const method = formMode === 'create' ? 'POST' : 'PUT';
 
         const payload = formMode === 'create'
             ? { ...formData, folder_id: folderId }
-            : { ...formData }; // PUT probably doesn't need folder_id unless moving
+            : { ...formData };
 
         try {
             const res = await fetch(url, {
@@ -329,37 +374,52 @@ export default function FolderEbooks() {
 
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Title <span className="text-red-500">*</span></label>
                                 <input
                                     type="text"
+                                    name="title"
                                     required
                                     value={formData.title}
-                                    onChange={e => setFormData({ ...formData, title: e.target.value })}
-                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 outline-none"
+                                    onChange={handleInputChange}
+                                    className={`w-full border rounded-lg px-3 py-2 focus:ring-2 outline-none ${errors.title ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-red-500'}`}
                                 />
+                                {errors.title && <p className="text-xs text-red-500 mt-1">{errors.title}</p>}
                             </div>
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                                 <textarea
+                                    name="description"
                                     rows={3}
                                     value={formData.description}
-                                    onChange={e => setFormData({ ...formData, description: e.target.value })}
+                                    onChange={handleInputChange}
                                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 outline-none"
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">PDF File URL *</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">PDF File URL <span className="text-red-500">*</span></label>
+                                <div className="mb-2 bg-blue-50 text-blue-700 px-3 py-2 rounded-lg text-xs flex gap-2 items-start border border-blue-100">
+                                    <span className="mt-0.5">ℹ️</span>
+                                    <span>
+                                        <strong>Only Google Drive links are accepted.</strong><br />
+                                        Make sure the file permission is set to "Anyone with the link can view".
+                                    </span>
+                                </div>
                                 <input
                                     type="text"
+                                    name="file_url"
                                     required
                                     value={formData.file_url}
-                                    onChange={e => setFormData({ ...formData, file_url: e.target.value })}
-                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 outline-none"
-                                    placeholder="https://..."
-                                    onBlur={(e) => handleAutoCover(e.target.value)}
+                                    onChange={handleInputChange}
+                                    className={`w-full border rounded-lg px-3 py-2 focus:ring-2 outline-none ${errors.file_url ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-red-500'}`}
+                                    placeholder="https://drive.google.com/..."
+                                    onBlur={(e) => {
+                                        validateField('file_url', e.target.value);
+                                        handleAutoCover(e.target.value);
+                                    }}
                                 />
+                                {errors.file_url && <p className="text-xs text-red-500 mt-1">{errors.file_url}</p>}
                                 <p className="text-xs text-gray-500 mt-1">Direct link to the PDF file.</p>
                             </div>
 
@@ -390,7 +450,8 @@ export default function FolderEbooks() {
                                 </button>
                                 <button
                                     type="submit"
-                                    className="px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700"
+                                    disabled={!isFormValid()}
+                                    className={`px-4 py-2 text-white rounded-lg font-medium transition ${!isFormValid() ? 'bg-gray-300 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'}`}
                                 >
                                     Save E-Book
                                 </button>

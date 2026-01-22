@@ -245,10 +245,50 @@ export default function CMSFAQ() {
         setIsFormOpen(true);
     };
 
+    const [errors, setErrors] = useState({ question: '', answer: '' });
+
+    const validateField = (name: string, value: string) => {
+        let error = '';
+        if (name === 'question' && !value.trim()) {
+            error = 'Question is required';
+        } else if (name === 'answer' && !value.trim()) {
+            error = 'Answer is required';
+        }
+        setErrors(prev => ({ ...prev, [name]: error }));
+        return error === '';
+    };
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+
+        if (name === 'question' || name === 'answer') {
+            validateField(name, value);
+        }
+    };
+
+    const isFormValid = () => {
+        return (
+            formData.question.trim() !== '' &&
+            formData.answer.trim() !== '' &&
+            !errors.question &&
+            !errors.answer
+        );
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (isSubmitting) return; // Prevent multiple submissions
+        if (isSubmitting) return;
+
+        // Final validation
+        const isQuestionValid = validateField('question', formData.question);
+        const isAnswerValid = validateField('answer', formData.answer);
+
+        if (!isQuestionValid || !isAnswerValid) {
+            setToast({ isOpen: true, message: 'Please fill in all required fields.', type: 'error' });
+            return;
+        }
 
         setIsSubmitting(true);
         const url = formMode === 'create' ? '/api/admin/cms/faq' : `/api/admin/cms/faq/${formData.id}`;
@@ -382,24 +422,28 @@ export default function CMSFAQ() {
                         </div>
                         <form onSubmit={handleSubmit} className="p-6 space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Question</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Question <span className="text-red-500">*</span></label>
                                 <input
                                     type="text"
+                                    name="question"
                                     required
                                     value={formData.question}
-                                    onChange={e => setFormData({ ...formData, question: e.target.value })}
-                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 outline-none"
+                                    onChange={handleInputChange}
+                                    className={`w-full border rounded-lg px-3 py-2 focus:ring-2 outline-none ${errors.question ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-red-500'}`}
                                 />
+                                {errors.question && <p className="text-xs text-red-500 mt-1">{errors.question}</p>}
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Answer</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Answer <span className="text-red-500">*</span></label>
                                 <textarea
+                                    name="answer"
                                     required
                                     rows={4}
                                     value={formData.answer}
-                                    onChange={e => setFormData({ ...formData, answer: e.target.value })}
-                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 outline-none"
+                                    onChange={handleInputChange}
+                                    className={`w-full border rounded-lg px-3 py-2 focus:ring-2 outline-none ${errors.answer ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-red-500'}`}
                                 />
+                                {errors.answer && <p className="text-xs text-red-500 mt-1">{errors.answer}</p>}
                             </div>
                             <div className="flex gap-4">
                                 <div className="flex-1">
@@ -426,8 +470,8 @@ export default function CMSFAQ() {
                                 </button>
                                 <button
                                     type="submit"
-                                    disabled={isSubmitting}
-                                    className="px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                    disabled={isSubmitting || !isFormValid()}
+                                    className={`px-4 py-2 text-white rounded-lg font-medium transition-all cursor-pointer flex items-center gap-2 ${isSubmitting || !isFormValid() ? 'bg-gray-300 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'}`}
                                 >
                                     {isSubmitting ? (
                                         <>

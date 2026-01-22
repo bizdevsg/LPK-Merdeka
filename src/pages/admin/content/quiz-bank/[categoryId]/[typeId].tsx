@@ -285,26 +285,50 @@ export default function QuestionsManager() {
         }
     };
 
-    const validateForm = () => {
-        if (!formContent.trim()) return "Question content is required";
-        if (formOptions.some(opt => !opt.trim())) return "All options must be filled";
-        if (formOptions.length < 2) return "At least 2 options are required";
+    const [errors, setErrors] = useState({ content: '', options: '', correctAnswer: '' });
 
-        // Ensure correct answer matches one of the options (exact string match)
-        if (!formCorrectAnswer || !formOptions.includes(formCorrectAnswer)) {
-            // Check if correct answer is index-based or value-based? 
-            // The model stores 'correct_answer' as string. 
-            // Let's assume it stores the OPTION VALUE.
-            return "Please select a valid correct answer";
+    const validateField = (name: string, value: any) => {
+        let error = '';
+        if (name === 'content' && !value.trim()) {
+            error = 'Question content is required';
+        } else if (name === 'options') {
+            if (value.some((opt: string) => !opt.trim())) {
+                error = 'All options must be filled';
+            } else if (value.length < 2) {
+                error = 'At least 2 options are required';
+            }
+        } else if (name === 'correctAnswer') {
+            if (!value) {
+                error = 'Please select a valid correct answer';
+            }
         }
-        return null;
+        setErrors(prev => ({ ...prev, [name]: error }));
+        return error === '';
+    };
+
+    const isFormValid = () => {
+        return (
+            formContent.trim() !== '' &&
+            formOptions.every(opt => opt.trim() !== '') &&
+            formOptions.length >= 2 &&
+            formCorrectAnswer !== '' &&
+            !errors.content &&
+            !errors.options &&
+            !errors.correctAnswer
+        );
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        const error = validateForm();
-        if (error) {
-            setToast({ isOpen: true, message: error, type: 'error' });
+
+        // Final validation
+        const isContentValid = validateField('content', formContent);
+        const isOptionsValid = validateField('options', formOptions);
+        // Correct answer check needs to act on current state, ensure it's in options
+        const isCorrectAnswerValid = validateField('correctAnswer', formCorrectAnswer) && formOptions.includes(formCorrectAnswer);
+
+        if (!isContentValid || !isOptionsValid || !isCorrectAnswerValid) {
+            setToast({ isOpen: true, message: 'Please fix errors.', type: 'error' });
             return;
         }
 
@@ -454,15 +478,19 @@ export default function QuestionsManager() {
                         </h3>
                         <form onSubmit={handleSubmit} className="space-y-6">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Question Content</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Question Content <span className="text-red-500">*</span></label>
                                 <textarea
                                     required
                                     rows={3}
                                     value={formContent}
-                                    onChange={e => setFormContent(e.target.value)}
-                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 outline-none"
+                                    onChange={e => {
+                                        setFormContent(e.target.value);
+                                        validateField('content', e.target.value);
+                                    }}
+                                    className={`w-full border rounded-lg px-3 py-2 outline-none ${errors.content ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-red-500 focus:ring-2'}`}
                                     placeholder="Type the question here..."
                                 />
+                                {errors.content && <p className="text-xs text-red-600 mt-1">{errors.content}</p>}
                             </div>
 
                             <div>
@@ -532,7 +560,8 @@ export default function QuestionsManager() {
                                 </button>
                                 <button
                                     type="submit"
-                                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                                    disabled={!isFormValid()}
+                                    className={`px-4 py-2 text-white rounded-lg transition ${!isFormValid() ? 'bg-gray-300 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'}`}
                                 >
                                     Save Question
                                 </button>

@@ -109,8 +109,61 @@ export default function UsersManagement() {
         setIsFormOpen(true);
     };
 
+    const [errors, setErrors] = useState({ name: '', email: '', password: '' });
+
+    const validateField = (name: string, value: string) => {
+        let error = '';
+        if (name === 'name' && !value.trim()) {
+            error = 'Name is required';
+        } else if (name === 'email') {
+            if (!value.trim()) {
+                error = 'Email is required';
+            } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+                error = 'Invalid email format';
+            }
+        } else if (name === 'password') {
+            if (formMode === 'create' && !value.trim()) {
+                error = 'Password is required for new users';
+            } else if (value && value.length < 6) {
+                error = 'Password must be at least 6 characters';
+            }
+        }
+        setErrors(prev => ({ ...prev, [name]: error }));
+        return error === '';
+    };
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+
+        if (name === 'name' || name === 'email' || name === 'password') {
+            validateField(name, value);
+        }
+    };
+
+    const isFormValid = () => {
+        return (
+            formData.name.trim() !== '' &&
+            formData.email.trim() !== '' &&
+            (formMode === 'edit' || (formMode === 'create' && formData.password.trim() !== '')) &&
+            !errors.name &&
+            !errors.email &&
+            !errors.password
+        );
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Final validation
+        const isNameValid = validateField('name', formData.name);
+        const isEmailValid = validateField('email', formData.email);
+        const isPasswordValid = validateField('password', formData.password);
+
+        if (!isNameValid || !isEmailValid || !isPasswordValid) {
+            setToast({ isOpen: true, message: 'Please fix errors.', type: 'error' });
+            return;
+        }
 
         const url = formMode === 'create' ? '/api/admin/users' : `/api/admin/users/${formData.id}`;
         const method = formMode === 'create' ? 'POST' : 'PUT';
@@ -244,36 +297,42 @@ export default function UsersManagement() {
                         </div>
                         <form onSubmit={handleSubmit} className="p-6 space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Full Name <span className="text-red-500">*</span></label>
                                 <input
                                     type="text"
+                                    name="name"
                                     required
                                     value={formData.name}
-                                    onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 outline-none"
+                                    onChange={handleInputChange}
+                                    className={`w-full border rounded-lg px-3 py-2 focus:ring-2 outline-none ${errors.name ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-red-500'}`}
                                 />
+                                {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Email <span className="text-red-500">*</span></label>
                                 <input
                                     type="email"
+                                    name="email"
                                     required
                                     value={formData.email}
-                                    onChange={e => setFormData({ ...formData, email: e.target.value })}
-                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 outline-none"
+                                    onChange={handleInputChange}
+                                    className={`w-full border rounded-lg px-3 py-2 focus:ring-2 outline-none ${errors.email ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-red-500'}`}
                                 />
+                                {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Password {formMode === 'edit' && <span className="text-gray-400 font-normal">(Leave blank to keep current)</span>}
+                                    Password {formMode === 'create' && <span className="text-red-500">*</span>} {formMode === 'edit' && <span className="text-gray-400 font-normal">(Leave blank to keep current)</span>}
                                 </label>
                                 <input
                                     type="password"
+                                    name="password"
                                     required={formMode === 'create'}
                                     value={formData.password}
-                                    onChange={e => setFormData({ ...formData, password: e.target.value })}
-                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 outline-none"
+                                    onChange={handleInputChange}
+                                    className={`w-full border rounded-lg px-3 py-2 focus:ring-2 outline-none ${errors.password ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-red-500'}`}
                                 />
+                                {errors.password && <p className="text-xs text-red-500 mt-1">{errors.password}</p>}
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
@@ -296,7 +355,8 @@ export default function UsersManagement() {
                                 </button>
                                 <button
                                     type="submit"
-                                    className="px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700"
+                                    disabled={!isFormValid()}
+                                    className={`px-4 py-2 text-white rounded-lg font-medium transition ${!isFormValid() ? 'bg-gray-300 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'}`}
                                 >
                                     {formMode === 'create' ? 'Create User' : 'Save Changes'}
                                 </button>

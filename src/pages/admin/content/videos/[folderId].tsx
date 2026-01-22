@@ -187,8 +187,54 @@ export default function FolderVideos() {
         }
     };
 
+    const [errors, setErrors] = useState({ title: '', url: '' });
+
+    const validateField = (name: string, value: string) => {
+        let error = '';
+        if (name === 'title' && !value.trim()) {
+            error = 'Title is required';
+        } else if (name === 'url') {
+            if (!value.trim()) {
+                error = 'URL is required';
+            } else if (!/(youtube\.com|youtu\.be|drive\.google\.com|docs\.google\.com)/.test(value)) {
+                error = 'Invalid URL! Only YouTube or Google Drive links are allowed.';
+            }
+        }
+        setErrors(prev => ({ ...prev, [name]: error }));
+        return error === '';
+    };
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+
+        // Real-time validation for specific fields
+        if (name === 'title' || name === 'url') {
+            validateField(name, value);
+        }
+    };
+
+    const isFormValid = () => {
+        return (
+            formData.title.trim() !== '' &&
+            formData.url.trim() !== '' &&
+            !errors.title &&
+            !errors.url
+        );
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Final validation check
+        const isTitleValid = validateField('title', formData.title);
+        const isUrlValid = validateField('url', formData.url);
+
+        if (!isTitleValid || !isUrlValid) {
+            setToast({ isOpen: true, message: 'Please fix the errors in the form.', type: 'error' });
+            return;
+        }
+
         const url = formMode === 'create' ? '/api/admin/content/videos' : `/api/admin/content/videos/${formData.id}`;
         const method = formMode === 'create' ? 'POST' : 'PUT';
 
@@ -347,37 +393,52 @@ export default function FolderVideos() {
 
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Title <span className="text-red-500">*</span></label>
                                 <input
                                     type="text"
+                                    name="title"
                                     required
                                     value={formData.title}
-                                    onChange={e => setFormData({ ...formData, title: e.target.value })}
-                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 outline-none"
+                                    onChange={handleInputChange}
+                                    className={`w-full border rounded-lg px-3 py-2 focus:ring-2 outline-none ${errors.title ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-red-500'}`}
                                 />
+                                {errors.title && <p className="text-xs text-red-500 mt-1">{errors.title}</p>}
                             </div>
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                                 <textarea
+                                    name="description"
                                     rows={3}
                                     value={formData.description}
-                                    onChange={e => setFormData({ ...formData, description: e.target.value })}
+                                    onChange={handleInputChange}
                                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 outline-none"
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Video URL (YouTube/Drive) *</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Video URL (YouTube/Drive) <span className="text-red-500">*</span></label>
+                                <div className="mb-2 bg-blue-50 text-blue-700 px-3 py-2 rounded-lg text-xs flex gap-2 items-start border border-blue-100">
+                                    <span className="mt-0.5">ℹ️</span>
+                                    <span>
+                                        <strong>Only YouTube or Google Drive links are accepted.</strong><br />
+                                        For Drive, ensure permission is set to "Anyone with the link".
+                                    </span>
+                                </div>
                                 <input
                                     type="text"
+                                    name="url"
                                     required
                                     value={formData.url}
-                                    onChange={e => setFormData({ ...formData, url: e.target.value })}
-                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 outline-none"
-                                    placeholder="https://..."
-                                    onBlur={(e) => handleAutoCover(e.target.value)}
+                                    onChange={handleInputChange}
+                                    className={`w-full border rounded-lg px-3 py-2 focus:ring-2 outline-none ${errors.url ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-red-500'}`}
+                                    placeholder="https://youtube.com/... or https://drive.google.com/..."
+                                    onBlur={(e) => {
+                                        validateField('url', e.target.value);
+                                        handleAutoCover(e.target.value);
+                                    }}
                                 />
+                                {errors.url && <p className="text-xs text-red-500 mt-1">{errors.url}</p>}
                             </div>
 
                             <div>
@@ -422,7 +483,8 @@ export default function FolderVideos() {
                                 </button>
                                 <button
                                     type="submit"
-                                    className="px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700"
+                                    disabled={!isFormValid()}
+                                    className={`px-4 py-2 text-white rounded-lg font-medium transition ${!isFormValid() ? 'bg-gray-300 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'}`}
                                 >
                                     Save Video
                                 </button>

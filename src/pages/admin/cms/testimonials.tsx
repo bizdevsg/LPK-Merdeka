@@ -257,10 +257,55 @@ export default function CMSTestimonials() {
         setIsFormOpen(true);
     };
 
+    const [errors, setErrors] = useState({ name: '', role: '', content: '' });
+
+    const validateField = (name: string, value: string) => {
+        let error = '';
+        if (name === 'name' && !value.trim()) {
+            error = 'Name is required';
+        } else if (name === 'role' && !value.trim()) {
+            error = 'Role is required';
+        } else if (name === 'content' && !value.trim()) {
+            error = 'Content is required';
+        }
+        setErrors(prev => ({ ...prev, [name]: error }));
+        return error === '';
+    };
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+
+        if (name === 'name' || name === 'role' || name === 'content') {
+            validateField(name, value);
+        }
+    };
+
+    const isFormValid = () => {
+        return (
+            formData.name.trim() !== '' &&
+            formData.role.trim() !== '' &&
+            formData.content.trim() !== '' &&
+            !errors.name &&
+            !errors.role &&
+            !errors.content
+        );
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
         if (isSubmitting) return;
+
+        // Final validation
+        const isNameValid = validateField('name', formData.name);
+        const isRoleValid = validateField('role', formData.role);
+        const isContentValid = validateField('content', formData.content);
+
+        if (!isNameValid || !isRoleValid || !isContentValid) {
+            setToast({ isOpen: true, message: 'Please fill in all required fields.', type: 'error' });
+            return;
+        }
 
         setIsSubmitting(true);
         const url = formMode === 'create' ? '/api/admin/cms/testimonials' : `/api/admin/cms/testimonials/${formData.id}`;
@@ -367,35 +412,41 @@ export default function CMSTestimonials() {
                         <form onSubmit={handleSubmit} className="p-6 space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Name <span className="text-red-500">*</span></label>
                                     <input
                                         type="text"
+                                        name="name"
                                         required
                                         value={formData.name}
-                                        onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 outline-none"
+                                        onChange={handleInputChange}
+                                        className={`w-full border rounded-lg px-3 py-2 focus:ring-2 outline-none ${errors.name ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-red-500'}`}
                                     />
+                                    {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Role/Position</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Role/Position <span className="text-red-500">*</span></label>
                                     <input
                                         type="text"
+                                        name="role"
                                         required
                                         value={formData.role}
-                                        onChange={e => setFormData({ ...formData, role: e.target.value })}
-                                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 outline-none"
+                                        onChange={handleInputChange}
+                                        className={`w-full border rounded-lg px-3 py-2 focus:ring-2 outline-none ${errors.role ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-red-500'}`}
                                     />
+                                    {errors.role && <p className="text-xs text-red-500 mt-1">{errors.role}</p>}
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Content</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Content <span className="text-red-500">*</span></label>
                                 <textarea
+                                    name="content"
                                     required
                                     rows={4}
                                     value={formData.content}
-                                    onChange={e => setFormData({ ...formData, content: e.target.value })}
-                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 outline-none"
+                                    onChange={handleInputChange}
+                                    className={`w-full border rounded-lg px-3 py-2 focus:ring-2 outline-none ${errors.content ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-red-500'}`}
                                 />
+                                {errors.content && <p className="text-xs text-red-500 mt-1">{errors.content}</p>}
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Avatar URL (Optional)</label>
@@ -431,8 +482,8 @@ export default function CMSTestimonials() {
                                 </button>
                                 <button
                                     type="submit"
-                                    disabled={isSubmitting}
-                                    className="px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                    disabled={isSubmitting || !isFormValid()}
+                                    className={`px-4 py-2 text-white rounded-lg font-medium transition-all cursor-pointer flex items-center gap-2 ${isSubmitting || !isFormValid() ? 'bg-gray-300 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'}`}
                                 >
                                     {isSubmitting ? (
                                         <>

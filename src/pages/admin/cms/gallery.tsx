@@ -100,8 +100,53 @@ export default function CMSGallery() {
         setIsFormOpen(true);
     };
 
+    const [errors, setErrors] = useState({ image_url: '' });
+
+    const validateField = (name: string, value: string) => {
+        let error = '';
+        if (name === 'image_url') {
+            if (!value.trim()) {
+                error = 'URL is required';
+            } else if (formData.type === 'video' && !/(youtube\.com|youtu\.be|drive\.google\.com)/.test(value)) {
+                error = 'Invalid URL! Must be YouTube or Google Drive.';
+            }
+        }
+        setErrors(prev => ({ ...prev, [name]: error }));
+        return error === '';
+    };
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+
+        // If type changes, revalidate image_url if it has value
+        if (name === 'type' && formData.image_url) {
+            setErrors({ image_url: '' });
+        }
+
+        if (name === 'image_url') {
+            validateField(name, value);
+        }
+    };
+
+    const isFormValid = () => {
+        return (
+            formData.image_url.trim() !== '' &&
+            !errors.image_url
+        );
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Final validation
+        const isUrlValid = validateField('image_url', formData.image_url);
+
+        if (!isUrlValid) {
+            setToast({ isOpen: true, message: 'Please fix the errors.', type: 'error' });
+            return;
+        }
+
         const url = formMode === 'create' ? '/api/admin/cms/gallery' : `/api/admin/cms/gallery/${formData.id}`;
         const method = formMode === 'create' ? 'POST' : 'PUT';
 
@@ -232,19 +277,22 @@ export default function CMSGallery() {
                                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 outline-none"
                                 >
                                     <option value="image">Image</option>
+                                    <option value="image">Image</option>
                                     <option value="video">Video</option>
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">{formData.type === 'video' ? 'Video URL' : 'Image URL'}</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">{formData.type === 'video' ? 'Video URL' : 'Image URL'} <span className="text-red-500">*</span></label>
                                 <input
                                     type="text"
+                                    name="image_url"
                                     required
                                     value={formData.image_url}
-                                    onChange={e => setFormData({ ...formData, image_url: e.target.value })}
-                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 outline-none"
+                                    onChange={handleInputChange}
+                                    className={`w-full border rounded-lg px-3 py-2 focus:ring-2 outline-none ${errors.image_url ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-red-500'}`}
                                     placeholder="https://..."
                                 />
+                                {errors.image_url && <p className="text-xs text-red-500 mt-1">{errors.image_url}</p>}
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
@@ -269,7 +317,8 @@ export default function CMSGallery() {
                                 </button>
                                 <button
                                     type="submit"
-                                    className="px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700"
+                                    disabled={!isFormValid()}
+                                    className={`px-4 py-2 text-white rounded-lg font-medium transition ${!isFormValid() ? 'bg-gray-300 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'}`}
                                 >
                                     Save
                                 </button>

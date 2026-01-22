@@ -138,19 +138,73 @@ export default function AttendanceSessionsManagement() {
         setIsFormOpen(true);
     };
 
+    const [errors, setErrors] = useState({ title: '', date: '', start_time: '', end_time: '' });
+
+    const validateField = (name: string, value: string) => {
+        let error = '';
+        if (name === 'title' && !value.trim()) {
+            error = 'Title is required';
+        } else if (name === 'date' && !value.trim()) {
+            error = 'Date is required';
+        } else if (name === 'start_time' && !value.trim()) {
+            error = 'Start time is required';
+        } else if (name === 'end_time' && !value.trim()) {
+            error = 'End time is required';
+        }
+
+        // Time logic check
+        if (name === 'end_time' || name === 'start_time') {
+            const startStr = name === 'start_time' ? value : formData.start_time;
+            const endStr = name === 'end_time' ? value : formData.end_time;
+
+            if (startStr && endStr) {
+                const start = new Date(`1970-01-01T${startStr}:00`);
+                const end = new Date(`1970-01-01T${endStr}:00`);
+                if (end <= start) {
+                    setTimeError('End time must be later than start time');
+                } else {
+                    setTimeError('');
+                }
+            }
+        }
+
+        setErrors(prev => ({ ...prev, [name]: error }));
+        return error === '';
+    };
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+
+        validateField(name, value);
+    };
+
+    const isFormValid = () => {
+        return (
+            formData.title.trim() !== '' &&
+            formData.date.trim() !== '' &&
+            formData.start_time.trim() !== '' &&
+            formData.end_time.trim() !== '' &&
+            !errors.title &&
+            !errors.date &&
+            !errors.start_time &&
+            !errors.end_time &&
+            !timeError
+        );
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setTimeError(''); // Clear previous error
 
-        // Validate end_time is not before start_time
-        if (formData.start_time && formData.end_time) {
-            const start = new Date(`1970-01-01T${formData.start_time}:00`);
-            const end = new Date(`1970-01-01T${formData.end_time}:00`);
+        // Final validation
+        const isTitleValid = validateField('title', formData.title);
+        const isDateValid = validateField('date', formData.date);
+        const isStartValid = validateField('start_time', formData.start_time);
+        const isEndValid = validateField('end_time', formData.end_time);
 
-            if (end <= start) {
-                setTimeError('End time must be later than start time');
-                return;
-            }
+        if (!isTitleValid || !isDateValid || !isStartValid || !isEndValid || timeError) {
+            setToast({ isOpen: true, message: 'Please fix errors.', type: 'error' });
+            return;
         }
 
         const url = formMode === 'create' ? '/api/admin/attendance-sessions' : `/api/admin/attendance-sessions/${formData.id}`;
@@ -311,52 +365,54 @@ export default function AttendanceSessionsManagement() {
                         </div>
                         <form onSubmit={handleSubmit} className="p-6 space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Title <span className="text-red-500">*</span></label>
                                 <input
                                     type="text"
+                                    name="title"
                                     required
                                     value={formData.title}
-                                    onChange={e => setFormData({ ...formData, title: e.target.value })}
+                                    onChange={handleInputChange}
                                     placeholder="e.g. Sesi Pagi 1"
-                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 outline-none"
+                                    className={`w-full border rounded-lg px-3 py-2 focus:ring-2 outline-none ${errors.title ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-red-500'}`}
                                 />
+                                {errors.title && <p className="text-xs text-red-500 mt-1">{errors.title}</p>}
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Date <span className="text-red-500">*</span></label>
                                 <input
                                     type="date"
+                                    name="date"
                                     required
                                     value={formData.date}
-                                    onChange={e => setFormData({ ...formData, date: e.target.value })}
-                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 outline-none"
+                                    onChange={handleInputChange}
+                                    className={`w-full border rounded-lg px-3 py-2 focus:ring-2 outline-none ${errors.date ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-red-500'}`}
                                 />
+                                {errors.date && <p className="text-xs text-red-500 mt-1">{errors.date}</p>}
                             </div>
                             <div className="flex gap-4">
                                 <div className="flex-1">
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Start Time <span className="text-red-500">*</span></label>
                                     <input
                                         type="time"
+                                        name="start_time"
                                         required
                                         value={formData.start_time}
-                                        onChange={e => {
-                                            setFormData({ ...formData, start_time: e.target.value });
-                                            setTimeError(''); // Clear error when user changes time
-                                        }}
-                                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 outline-none"
+                                        onChange={handleInputChange}
+                                        className={`w-full border rounded-lg px-3 py-2 focus:ring-2 outline-none ${errors.start_time ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-red-500'}`}
                                     />
+                                    {errors.start_time && <p className="text-xs text-red-500 mt-1">{errors.start_time}</p>}
                                 </div>
                                 <div className="flex-1">
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">End Time</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">End Time <span className="text-red-500">*</span></label>
                                     <input
                                         type="time"
+                                        name="end_time"
                                         required
                                         value={formData.end_time}
-                                        onChange={e => {
-                                            setFormData({ ...formData, end_time: e.target.value });
-                                            setTimeError(''); // Clear error when user changes time
-                                        }}
-                                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 outline-none"
+                                        onChange={handleInputChange}
+                                        className={`w-full border rounded-lg px-3 py-2 focus:ring-2 outline-none ${errors.end_time ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-red-500'}`}
                                     />
+                                    {errors.end_time && <p className="text-xs text-red-500 mt-1">{errors.end_time}</p>}
                                 </div>
                             </div>
 
@@ -395,7 +451,8 @@ export default function AttendanceSessionsManagement() {
                                 </button>
                                 <button
                                     type="submit"
-                                    className="px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700"
+                                    disabled={!isFormValid()}
+                                    className={`px-4 py-2 text-white rounded-lg font-medium transition ${!isFormValid() ? 'bg-gray-300 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'}`}
                                 >
                                     {formMode === 'create' ? 'Save Session' : 'Update Session'}
                                 </button>
