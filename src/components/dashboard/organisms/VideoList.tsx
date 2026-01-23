@@ -1,5 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { FaVideo, FaPlay, FaFolder, FaArrowLeft, FaExpand, FaTimes } from 'react-icons/fa';
+import React, { useEffect, useState, useRef } from 'react';
+import { FaVideo, FaPlay, FaFolder, FaArrowLeft, FaTimes, FaCheckCircle, FaClock, FaExpand, FaCompress } from 'react-icons/fa';
+import { useSearch } from '@/context/SearchContext';
+import { useAuth } from '@/context/AuthContext';
+import { Toast } from '@/components/shared/molecules/Toast';
 
 interface Video {
     id: string;
@@ -23,16 +26,25 @@ interface Folder {
     }
 }
 
-import { useSearch } from '@/context/SearchContext';
-
 export const VideoList: React.FC = () => {
     const { searchQuery } = useSearch();
+    const { user } = useAuth();
     const [view, setView] = useState<'folders' | 'items'>('folders');
     const [selectedFolder, setSelectedFolder] = useState<Folder | null>(null);
     const [folders, setFolders] = useState<Folder[]>([]);
     const [videos, setVideos] = useState<Video[]>([]);
     const [loading, setLoading] = useState(true);
-    const [activeVideo, setActiveVideo] = useState<string | null>(null);
+
+    // Player & Gamification State
+    const [activeVideo, setActiveVideo] = useState<Video | null>(null);
+    const [watchTime, setWatchTime] = useState(0);
+    const [initialStartTime, setInitialStartTime] = useState(0); // For iframe resume
+    const [hasAwarded, setHasAwarded] = useState(false);
+    const [targetTime, setTargetTime] = useState(0);
+    const [isFullscreen, setIsFullscreen] = useState(false);
+
+    // Toast State
+    const [toast, setToast] = useState({ isOpen: false, message: '', type: 'success' as 'success' | 'error' | 'info' });
 
     // Fetch Folders
     useEffect(() => {
@@ -74,6 +86,52 @@ export const VideoList: React.FC = () => {
         }
     }, [view, selectedFolder]);
 
+    // Timer Logic for Content Tracking
+    useEffect(() => {
+        let interval: NodeJS.Timeout;
+
+        if (activeVideo) {
+            // Calculate target time (70% of duration or default 60s if no duration)
+            const durationInSeconds = (activeVideo.duration || 1) * 60;
+            const calculatedTarget = Math.floor(durationInSeconds * 0.7);
+            const finalTarget = calculatedTarget > 0 ? calculatedTarget : 60;
+            setTargetTime(finalTarget);
+
+            // Check if already awarded derived from watchTime set in handleOpenVideo
+            if (watchTime >= finalTarget && finalTarget > 0) {
+                setHasAwarded(true);
+            } else {
+                setHasAwarded(false);
+            }
+
+            interval = setInterval(() => {
+                // Check if tab is visible to prevent background farming
+                if (document.visibilityState === 'visible') {
+                    setWatchTime(prev => {
+                        const newTime = prev + 1;
+                        // Save progress
+                        if (user?.id) {
+                            localStorage.setItem(`lpk-video-progress-${user.id}-${activeVideo.id}`, newTime.toString());
+                        }
+                        return newTime;
+                    });
+                }
+            }, 1000);
+        }
+
+        return () => {
+            if (interval) clearInterval(interval);
+        };
+    }, [activeVideo, user?.id]);
+
+    // Check Threshold
+    useEffect(() => {
+        if (activeVideo && !hasAwarded && targetTime > 0 && watchTime >= targetTime) {
+            trackVideoView(activeVideo.id);
+            setHasAwarded(true);
+        }
+    }, [watchTime, targetTime, activeVideo, hasAwarded]);
+
     const handleFolderClick = (folder: Folder) => {
         setSelectedFolder(folder);
         setView('items');
@@ -84,15 +142,32 @@ export const VideoList: React.FC = () => {
         setView('folders');
     };
 
-    const getEmbedUrl = (url: string) => {
-        // YouTube
-        const ytMatch = url.match(/(?:youtu\.be\/|youtube\.com\/watch\?v=|youtube\.com\/embed\/)([\w-]{11})/);
-        if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1`;
+    const handleOpenVideo = (video: Video) => {
+        // Load progress synchronously before setting active video
+        let savedTime = 0;
+        if (user?.id) {
+            const stored = localStorage.getItem(`lpk-video-progress-${user.id}-${video.id}`);
+            if (stored) {
+                savedTime = parseInt(stored) || 0;
+            }
+        }
 
-        // Drive
-        // Matches /file/d/ID/preview or /file/d/ID/view
+        setInitialStartTime(savedTime);
+        setWatchTime(savedTime);
+        setActiveVideo(video);
+    };
+
+    const getEmbedUrl = (url: string, start: number = 0) => {
+        const ytMatch = url.match(/(?:youtu\.be\/|youtube\.com\/watch\?v=|youtube\.com\/embed\/)([\w-]{11})/);
+        if (ytMatch) {
+            // YouTube: Add start parameter
+            return `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&start=${start}`;
+        }
+
         const driveMatch = url.match(/\/d\/([-\w]{25,})/);
-        if (driveMatch) return `https://drive.google.com/file/d/${driveMatch[1]}/preview`;
+        if (driveMatch) {
+            return `https://drive.google.com/file/d/${driveMatch[1]}/preview`;
+        }
 
         return url;
     };
@@ -106,12 +181,27 @@ export const VideoList: React.FC = () => {
             });
             const data = await res.json();
             if (res.ok && data.awarded) {
-                // Could invoke a toast notification here later
-                console.log("Points Awarded:", data.points);
+                setToast({
+                    isOpen: true,
+                    message: `Selamat! Anda mendapatkan +${data.points} Poin!`,
+                    type: 'success'
+                });
             }
         } catch (e) {
             console.error(e);
         }
+    };
+
+    const closePlayer = () => {
+        setActiveVideo(null);
+        setWatchTime(0);
+        setHasAwarded(false);
+        setIsFullscreen(false);
+        setInitialStartTime(0);
+    };
+
+    const toggleFullscreen = () => {
+        setIsFullscreen(!isFullscreen);
     };
 
     // FILTER LOGIC
@@ -197,10 +287,7 @@ export const VideoList: React.FC = () => {
                         <div key={video.id} className="bg-white dark:bg-zinc-900 rounded-xl overflow-hidden border border-gray-100 dark:border-zinc-800 hover:shadow-lg transition-all group flex flex-col h-full">
                             <div
                                 className="relative aspect-video bg-gray-900 flex items-center justify-center overflow-hidden cursor-pointer group/video"
-                                onClick={() => {
-                                    setActiveVideo(video.url);
-                                    trackVideoView(video.id);
-                                }}
+                                onClick={() => handleOpenVideo(video)}
                             >
                                 {video.cover_url ? (
                                     <img src={video.cover_url} alt={video.title} className="w-full h-full object-cover opacity-80 group-hover/video:opacity-60 transition-opacity" />
@@ -237,24 +324,87 @@ export const VideoList: React.FC = () => {
 
             {/* Video Player Modal */}
             {activeVideo && (
-                <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4 md:p-12">
-                    <button
-                        onClick={() => setActiveVideo(null)}
-                        className="absolute top-4 right-4 text-white p-2 hover:bg-white/10 rounded-full transition-colors flex items-center gap-2 z-50"
-                    >
-                        <FaTimes size={32} />
-                    </button>
+                <div className={`fixed inset-0 bg-black/95 z-50 flex flex-col justify-center items-center ${isFullscreen ? 'p-0 w-full h-full' : 'p-4 md:p-12'}`}>
+                    <div className={`w-full ${isFullscreen ? 'h-full' : 'max-w-6xl'} flex flex-col relative`}>
+                        {/* Header Controls */}
+                        <div className={`flex justify-between items-center text-white mb-2 ${isFullscreen ? 'absolute top-0 left-0 right-0 z-50 p-4 bg-gradient-to-b from-black/80 to-transparent' : ''}`}>
+                            <h3 className={`font-semibold text-lg line-clamp-1 flex-1 pr-4 ${isFullscreen ? 'text-white' : ''}`}>
+                                {activeVideo.title}
+                            </h3>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={toggleFullscreen}
+                                    className="text-white/80 hover:text-white hover:bg-white/10 p-2 rounded-full transition-colors"
+                                    title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+                                >
+                                    {isFullscreen ? <FaCompress size={20} /> : <FaExpand size={20} />}
+                                </button>
+                                <button
+                                    onClick={closePlayer}
+                                    className="text-white/80 hover:text-white hover:bg-white/10 p-2 rounded-full transition-colors flex items-center gap-2"
+                                >
+                                    <span className="hidden sm:inline text-sm">Close</span>
+                                    <FaTimes size={20} />
+                                </button>
+                            </div>
+                        </div>
 
-                    <div className="w-full max-w-6xl aspect-video bg-black rounded-xl overflow-hidden shadow-2xl animate-in zoom-in duration-200 relative">
-                        <iframe
-                            src={getEmbedUrl(activeVideo)}
-                            className="w-full h-full absolute inset-0"
-                            allow="autoplay; encrypted-media; picture-in-picture"
-                            allowFullScreen
-                        />
+                        {/* Video Container */}
+                        <div className={`bg-black rounded-xl overflow-hidden shadow-2xl relative ${isFullscreen ? 'flex-1 rounded-none' : 'aspect-video mb-4'}`}>
+                            <iframe
+                                src={getEmbedUrl(activeVideo.url, initialStartTime)}
+                                className="w-full h-full absolute inset-0"
+                                allow="autoplay; encrypted-media; picture-in-picture"
+                                allowFullScreen
+                            />
+                        </div>
+
+                        {/* Progress Bar & Status - Conditional Render based on Fullscreen */}
+                        <div className={`${isFullscreen ? 'absolute bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-2xl' : ''}`}>
+                            <div className={`bg-zinc-800/80 backdrop-blur-sm rounded-lg p-4 border border-zinc-700 transition-all ${isFullscreen ? 'hover:opacity-100 opacity-0' : ''}`}>
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-2">
+                                        {hasAwarded ? (
+                                            <div className="flex items-center gap-2 text-green-400">
+                                                <FaCheckCircle className="text-xl" />
+                                                <span className="font-bold">Poin Diterima!</span>
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center gap-2 text-gray-300">
+                                                <FaClock className="text-gray-400 animate-pulse" />
+                                                <span className="text-sm">Tonton untuk mendapatkan poin...</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <span className="text-xs text-gray-500 font-mono">
+                                        {hasAwarded ? '100%' : `${Math.min(100, Math.round((watchTime / targetTime) * 100))}%`}
+                                    </span>
+                                </div>
+
+                                <div className="w-full bg-zinc-700 h-2 rounded-full overflow-hidden">
+                                    <div
+                                        className={`h-full transition-all duration-1000 ease-linear ${hasAwarded ? 'bg-green-500' : 'bg-red-600'}`}
+                                        style={{ width: `${Math.min(100, (watchTime / targetTime) * 100)}%` }}
+                                    />
+                                </div>
+                                {!hasAwarded && (
+                                    <p className="text-xs text-gray-500 mt-2 text-center">
+                                        Tetap di halaman selama {Math.max(0, targetTime - watchTime)} detik.
+                                        <span className="block opacity-50 text-[10px] mt-1">(Dilarang pindah tab untuk mendapatkan poin)</span>
+                                    </p>
+                                )}
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}
+
+            <Toast
+                isOpen={toast.isOpen}
+                message={toast.message}
+                type={toast.type}
+                onClose={() => setToast({ ...toast, isOpen: false })}
+            />
         </div>
     );
 };

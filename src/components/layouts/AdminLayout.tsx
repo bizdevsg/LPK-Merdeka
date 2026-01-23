@@ -29,6 +29,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => 
     const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
     const dropdownRef = useRef<HTMLDivElement>(null);
     const [userProfile, setUserProfile] = useState<any>(null);
+    const [imageError, setImageError] = useState(false);
 
     useEffect(() => {
         if (user) {
@@ -38,6 +39,11 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => 
                 .catch(err => console.error("Failed to fetch admin profile", err));
         }
     }, [user]);
+
+    // Reset error when user changes or profile updates
+    useEffect(() => {
+        setImageError(false);
+    }, [user, userProfile]);
 
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
@@ -223,11 +229,12 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => 
                                     <p className="text-xs text-gray-500 dark:text-gray-400">{user?.role || 'Administrator'}</p>
                                 </div>
                                 <div className="w-9 h-9 rounded-full bg-gray-100 dark:bg-zinc-800 flex items-center justify-center overflow-hidden border border-gray-200 dark:border-zinc-700 relative">
-                                    {(userProfile?.photo_url || userProfile?.image || user?.image) ? (
+                                    {(!imageError && (userProfile?.photo_url || userProfile?.image || user?.image)) ? (
                                         <img
                                             src={userProfile?.photo_url || userProfile?.image || user?.image}
                                             alt="Profile"
                                             className="w-full h-full object-cover"
+                                            onError={() => setImageError(true)}
                                         />
                                     ) : (
                                         <div className="w-full h-full flex items-center justify-center bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 font-bold text-sm">

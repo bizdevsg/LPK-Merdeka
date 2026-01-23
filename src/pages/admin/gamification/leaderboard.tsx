@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { AdminLayout } from '@/components/layouts/AdminLayout';
 import { useSearch } from '@/context/SearchContext';
 import { FaUser, FaTrophy, FaStar } from 'react-icons/fa';
+import { Avatar } from '@/components/shared/atoms/Avatar';
 
 interface LeaderboardEntry {
     rank: number;
@@ -13,6 +14,8 @@ interface LeaderboardEntry {
     points: number;
     level: number;
 }
+
+
 
 export default function AdminLeaderboard() {
     const { searchQuery } = useSearch();
@@ -93,15 +96,7 @@ export default function AdminLeaderboard() {
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-zinc-700 overflow-hidden">
-                                                    {entry.image ? (
-                                                        <img src={entry.image} alt={entry.name} className="w-full h-full object-cover" />
-                                                    ) : (
-                                                        <div className="w-full h-full flex items-center justify-center text-gray-400 dark:text-gray-500">
-                                                            <FaUser />
-                                                        </div>
-                                                    )}
-                                                </div>
+                                                <Avatar src={entry.image || ''} alt={entry.name} size={32} />
                                                 <div>
                                                     <div className="font-semibold text-gray-900 dark:text-white">{entry.name}</div>
                                                     <div className="text-xs text-gray-500 dark:text-gray-400">{entry.email}</div>

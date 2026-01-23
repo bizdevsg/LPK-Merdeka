@@ -89,9 +89,16 @@ export const QuizList: React.FC = () => {
                         <div className="relative z-10 flex flex-col h-full justify-between">
                             <div>
                                 <div className="flex justify-between items-start mb-4">
-                                    <span className="bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">
-                                        {quiz.category.name}
-                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">
+                                            {quiz.category.name}
+                                        </span>
+                                        {!quiz.attempted && (
+                                            <span className="bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
+                                                <FaStar size={10} /> +100 XP
+                                            </span>
+                                        )}
+                                    </div>
                                     {quiz.attempted && (
                                         <div className="flex items-center gap-1 text-green-600 bg-green-50 px-2 py-1 rounded-lg text-sm font-bold">
                                             <FaCheckCircle /> Selesai

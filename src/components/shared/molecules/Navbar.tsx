@@ -53,6 +53,12 @@ export const Navbar: React.FC<NavbarProps> = ({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { theme, toggleTheme } = useTheme();
 
+  const [imageError, setImageError] = useState(false);
+
+  useEffect(() => {
+    setImageError(false);
+  }, [user]);
+
   const currentActiveNav = activeId || internalActiveNav;
 
   const handleNavClick = (id: string) => {
@@ -131,9 +137,14 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onClick={toggleDropdown}
               >
                 {/* Avatar */}
-                {(user?.photo_url || user?.image || user?.avatar) ? (
+                {(!imageError && (user?.photo_url || user?.image || user?.avatar)) ? (
                   <div className="w-8 h-8 rounded-full border border-white/30 overflow-hidden relative">
-                    <img src={user.photo_url || user.image || user.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                    <img
+                      src={user.photo_url || user.image || user.avatar}
+                      alt="Avatar"
+                      className="w-full h-full object-cover"
+                      onError={() => setImageError(true)}
+                    />
                   </div>
                 ) : (
                   <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold border border-white/30">

@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { FaBook, FaDownload, FaFolder, FaArrowLeft, FaExpand, FaTimes } from 'react-icons/fa';
+import { FaBook, FaFolder, FaArrowLeft, FaExpand, FaTimes, FaCheckCircle, FaClock } from 'react-icons/fa';
+import { useSearch } from '@/context/SearchContext';
+import { useAuth } from '@/context/AuthContext';
+import { Toast } from '@/components/shared/molecules/Toast';
 
 interface Ebook {
     id: string;
@@ -22,17 +25,25 @@ interface Folder {
     }
 }
 
-import { useSearch } from '@/context/SearchContext';
-
 export const EbookList: React.FC = () => {
     const { searchQuery } = useSearch();
+    const { user } = useAuth();
     const [view, setView] = useState<'folders' | 'items'>('folders');
     const [selectedFolder, setSelectedFolder] = useState<Folder | null>(null);
     const [folders, setFolders] = useState<Folder[]>([]);
     const [ebooks, setEbooks] = useState<Ebook[]>([]);
     const [loading, setLoading] = useState(true);
+
+    // Preview & Gamification State
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    const [activeEbookId, setActiveEbookId] = useState<string | null>(null);
     const [isFullscreen, setIsFullscreen] = useState(false);
+
+    const [readTime, setReadTime] = useState(0);
+    const [hasAwarded, setHasAwarded] = useState(false);
+    const TARGET_READ_TIME = 180; // 180 seconds
+
+    const [toast, setToast] = useState({ isOpen: false, message: '', type: 'success' as 'success' | 'error' | 'info' });
 
     // Fetch Folders
     useEffect(() => {
@@ -74,6 +85,62 @@ export const EbookList: React.FC = () => {
         }
     }, [view, selectedFolder]);
 
+    // Read Timer Logic
+    useEffect(() => {
+        let interval: NodeJS.Timeout;
+
+        if (previewUrl && activeEbookId) {
+            // New session loaded, check storage
+            if (user?.id) {
+                const savedProgress = localStorage.getItem(`lpk-ebook-progress-${user.id}-${activeEbookId}`);
+                if (savedProgress) {
+                    const parsedTime = parseInt(savedProgress);
+                    if (!isNaN(parsedTime)) {
+                        setReadTime(parsedTime);
+                        if (parsedTime >= TARGET_READ_TIME) {
+                            setHasAwarded(true);
+                        } else {
+                            setHasAwarded(false);
+                        }
+                    } else {
+                        setReadTime(0);
+                        setHasAwarded(false);
+                    }
+                } else {
+                    setReadTime(0);
+                    setHasAwarded(false);
+                }
+            } else {
+                setReadTime(0);
+                setHasAwarded(false);
+            }
+
+            interval = setInterval(() => {
+                if (document.visibilityState === 'visible') {
+                    setReadTime(prev => {
+                        const newTime = prev + 1;
+                        if (user?.id) {
+                            localStorage.setItem(`lpk-ebook-progress-${user.id}-${activeEbookId}`, newTime.toString());
+                        }
+                        return newTime;
+                    });
+                }
+            }, 1000);
+        }
+
+        return () => {
+            if (interval) clearInterval(interval);
+        };
+    }, [previewUrl, activeEbookId, user?.id]);
+
+    // Check Threshold
+    useEffect(() => {
+        if (activeEbookId && !hasAwarded && readTime >= TARGET_READ_TIME) {
+            trackEbookRead(activeEbookId);
+            setHasAwarded(true);
+        }
+    }, [readTime, activeEbookId, hasAwarded]);
+
     const handleFolderClick = (folder: Folder) => {
         setSelectedFolder(folder);
         setView('items');
@@ -85,8 +152,6 @@ export const EbookList: React.FC = () => {
     };
 
     const getPreviewLink = (url: string) => {
-        // Convert Drive view/download links to preview links
-        // Matches /file/d/ID/view or /file/d/ID/preview or /uc?id=ID
         const driveIdMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/) || url.match(/id=([a-zA-Z0-9_-]+)/);
         if (driveIdMatch) {
             return `https://drive.google.com/file/d/${driveIdMatch[1]}/preview`;
@@ -94,13 +159,17 @@ export const EbookList: React.FC = () => {
         return url;
     };
 
-    const handlePreview = (url: string) => {
-        setPreviewUrl(getPreviewLink(url));
+    const handlePreview = (ebook: Ebook) => {
+        setPreviewUrl(getPreviewLink(ebook.file_url));
+        setActiveEbookId(ebook.id);
     };
 
     const closePreview = () => {
         setPreviewUrl(null);
+        setActiveEbookId(null);
         setIsFullscreen(false);
+        setReadTime(0);
+        setHasAwarded(false);
     };
 
     const trackEbookRead = async (ebookId: string) => {
@@ -112,7 +181,11 @@ export const EbookList: React.FC = () => {
             });
             const data = await res.json();
             if (res.ok && data.awarded) {
-                console.log("Points Awarded:", data.points);
+                setToast({
+                    isOpen: true,
+                    message: `Selamat! Anda mendapatkan +${data.points} Poin!`,
+                    type: 'success'
+                });
             }
         } catch (e) {
             console.error(e);
@@ -217,10 +290,7 @@ export const EbookList: React.FC = () => {
                                     </p>
                                 )}
                                 <button
-                                    onClick={() => {
-                                        handlePreview(ebook.file_url);
-                                        trackEbookRead(ebook.id);
-                                    }}
+                                    onClick={() => handlePreview(ebook)}
                                     className="mt-auto w-full bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-colors shadow-sm hover:shadow-md"
                                 >
                                     <FaBook size={12} /> Baca / Preview
@@ -247,15 +317,48 @@ export const EbookList: React.FC = () => {
                             </button>
                         </div>
                     </div>
-                    <div className={`flex-1 bg-white rounded-lg overflow-hidden ${isFullscreen ? 'rounded-none' : ''}`}>
+
+                    {/* Progress Bar Container */}
+                    <div className={`relative flex-1 bg-white rounded-lg overflow-hidden ${isFullscreen ? 'rounded-none' : ''}`}>
                         <iframe
                             src={previewUrl}
-                            className="w-full h-full border-0"
+                            className={`w-full h-full border-0 ${!hasAwarded ? 'pb-8' : ''}`}
                             allowFullScreen
                         />
+
+                        {/* Floating Progress Bar */}
+                        <div className="absolute bottom-0 left-0 right-0 bg-zinc-900 border-t border-zinc-700 p-2 z-10">
+                            <div className="max-w-3xl mx-auto flex items-center gap-4">
+                                <div className="flex items-center gap-2 shrink-0 w-32">
+                                    {hasAwarded ? (
+                                        <div className="flex items-center gap-2 text-green-400 text-xs font-bold animate-in fade-in">
+                                            <FaCheckCircle /> Poin Diterima!
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center gap-2 text-gray-300 text-xs">
+                                            <FaClock className="animate-pulse" /> Membaca...
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="flex-1 bg-zinc-700 h-1.5 rounded-full overflow-hidden">
+                                    <div
+                                        className={`h-full transition-all duration-1000 ease-linear ${hasAwarded ? 'bg-green-500' : 'bg-blue-500'}`}
+                                        style={{ width: `${Math.min(100, (readTime / TARGET_READ_TIME) * 100)}%` }}
+                                    />
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}
+
+            <Toast
+                isOpen={toast.isOpen}
+                message={toast.message}
+                type={toast.type}
+                onClose={() => setToast({ ...toast, isOpen: false })}
+            />
         </div>
     );
 };

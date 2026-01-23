@@ -20,6 +20,7 @@ export default function DashboardPage() {
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [userProfile, setUserProfile] = useState<any>(null); // State for fresh user data
     const [showCautionBanner, setShowCautionBanner] = useState(true); // State for caution banner
+    const [imageError, setImageError] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     // Fetch fresh user data on mount and tab change
@@ -31,6 +32,11 @@ export default function DashboardPage() {
                 .catch(err => console.error("Failed to fetch user profile", err));
         }
     }, [isAuthenticated, activeTab]);
+
+    // Reset error when user changes
+    useEffect(() => {
+        setImageError(false);
+    }, [user, userProfile]);
 
     // Sync initial state
     useEffect(() => {
@@ -253,11 +259,12 @@ export default function DashboardPage() {
                                         <p className="text-xs text-gray-500 dark:text-gray-400">{user?.role || 'Peserta'}</p>
                                     </div>
                                     <div className="w-9 h-9 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden border border-gray-200 dark:border-zinc-700 relative">
-                                        {(userProfile?.photo_url || userProfile?.image || user?.image) ? (
+                                        {(!imageError && (userProfile?.photo_url || userProfile?.image || user?.image)) ? (
                                             <img
                                                 src={userProfile?.photo_url || userProfile?.image || user?.image}
                                                 alt="Profile"
                                                 className="w-full h-full object-cover"
+                                                onError={() => setImageError(true)}
                                             />
                                         ) : (
                                             <div className="text-red-600 font-bold text-sm">

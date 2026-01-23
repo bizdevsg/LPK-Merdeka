@@ -3,6 +3,7 @@ import { LeaderboardTable } from "./organisms";
 import { LineHeading } from "../shared/molecules"; // Import LineHeading if available or use standard h2
 import Image from "next/image";
 import { FaCrown } from "react-icons/fa";
+import { Avatar } from "../shared/atoms";
 
 type LeaderboardData = {
   id: number;
@@ -71,9 +72,12 @@ export const LeaderboardTemplate = ({ data }: LeaderboardTemplateProps) => {
                     <FaCrown size={32} />
                   </div>
                 )}
-                <div className={`w-full h-full rounded-full border-4 overflow-hidden relative ${rank === 1 ? 'border-yellow-400 shadow-yellow-200 shadow-xl' : rank === 2 ? 'border-gray-300' : 'border-orange-300'}`}>
-                  <Image src={user.avatar} alt={user.title} fill className="object-cover" />
-                </div>
+                <Avatar
+                  src={user.avatar || ''}
+                  alt={user.title}
+                  size={rank === 1 ? 96 : 80}
+                  className={`border-4 ${rank === 1 ? 'border-yellow-400 shadow-yellow-200 shadow-xl' : rank === 2 ? 'border-gray-300' : 'border-orange-300'}`}
+                />
                 <div className={`absolute -bottom-3 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full flex items-center justify-center text-white font-bold shadow-md ${rank === 1 ? 'bg-yellow-500' : rank === 2 ? 'bg-gray-400' : 'bg-orange-400'}`}>
                   {rank}
                 </div>

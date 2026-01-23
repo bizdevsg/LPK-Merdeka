@@ -66,7 +66,92 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
         const attemptedSet = new Set(attemptedQuizIds.map((a: any) => a.quiz_id.toString()));
         const pendingQuizzes = activeQuizzes.filter((q: any) => !attemptedSet.has(q.id.toString())).length;
 
-        // 6. Recent Activities (last 5)
+        // 6. Calculate Streak from Logs
+        const loginLogs = await prisma.gamification_logs.findMany({
+            where: {
+                user_id: userId,
+                action_type: 'daily_login'
+            },
+            select: {
+                created_at: true
+            },
+            orderBy: {
+                created_at: 'desc'
+            }
+        });
+
+        // Process logs to finding distinct dates (YYYY-MM-DD)
+        // Process logs to finding distinct dates (YYYY-MM-DD)
+        const dateStrings = loginLogs.map((log: any) => {
+            const d = new Date(log.created_at);
+            return d.toISOString().split('T')[0];
+        });
+
+        const uniqueDatesSet = new Set<string>(dateStrings);
+
+        const distinctDates: string[] = Array.from(uniqueDatesSet).sort((a: string, b: string) => {
+            return new Date(b).getTime() - new Date(a).getTime();
+        });
+
+        let currentStreak = 0;
+        let maxStreak = 0;
+
+        // Calculate Current Streak
+        if (distinctDates.length > 0) {
+            const today = new Date().toISOString().split('T')[0];
+            const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+
+            // Check if the most recent login is today or yesterday
+            // If most recent is older than yesterday, streak is broken (0).
+            const lastLoginDate = distinctDates[0];
+
+            if (lastLoginDate === today || lastLoginDate === yesterday) {
+                currentStreak = 1;
+                let currentDate = new Date(lastLoginDate);
+
+                for (let i = 1; i < distinctDates.length; i++) {
+                    const prevDateStr = distinctDates[i];
+                    const prevDate = new Date(prevDateStr);
+
+                    // Difference in days
+                    const diffTime = currentDate.getTime() - prevDate.getTime();
+                    const diffDays = diffTime / (1000 * 3600 * 24);
+
+                    if (Math.round(diffDays) === 1) {
+                        currentStreak++;
+                        currentDate = prevDate;
+                    } else {
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Calculate Max Streak
+        // Iterate through all sorted distinct dates
+        if (distinctDates.length > 0) {
+            let tempStreak = 1;
+            let maxFound = 1;
+
+            for (let i = 0; i < distinctDates.length - 1; i++) {
+                const currentDate = new Date(distinctDates[i]);
+                const nextDate = new Date(distinctDates[i + 1]); // older date
+
+                const diffTime = currentDate.getTime() - nextDate.getTime();
+                const diffDays = diffTime / (1000 * 3600 * 24);
+
+                if (Math.round(diffDays) === 1) {
+                    tempStreak++;
+                } else {
+                    if (tempStreak > maxFound) maxFound = tempStreak;
+                    tempStreak = 1;
+                }
+            }
+            if (tempStreak > maxFound) maxFound = tempStreak;
+            maxStreak = maxFound;
+        }
+
+        // 7. Recent Activities (last 5)
         const recentActivities = await prisma.gamification_logs.findMany({
             where: { user_id: userId },
             orderBy: { created_at: 'desc' },
@@ -85,6 +170,8 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
             totalUsers,
             certificatesCount,
             pendingQuizzes,
+            currentStreak,
+            maxStreak,
             recentActivities: recentActivities.map((a: any) => ({
                 type: a.action_type,
                 points: a.points,

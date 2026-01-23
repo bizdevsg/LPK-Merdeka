@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { FaTrophy, FaCertificate, FaGamepad, FaVideo, FaBook, FaChartLine, FaStar, FaMedal } from 'react-icons/fa';
+import { FaTrophy, FaCertificate, FaGamepad, FaVideo, FaBook, FaChartLine, FaStar, FaMedal, FaFire } from 'react-icons/fa';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 
@@ -10,6 +10,8 @@ interface DashboardStats {
     totalUsers: number;
     certificatesCount: number;
     pendingQuizzes: number;
+    currentStreak: number;
+    maxStreak: number;
     recentActivities: Array<{
         type: string;
         points: number;
@@ -77,6 +79,9 @@ export const DashboardOverview: React.FC = () => {
     }
 
     const rankBadge = stats ? getRankBadge(stats.rank) : null;
+    const xpForNextLevel = 1000; // Assumption: 1000 XP per level
+    const currentLevelXP = (stats?.totalXP || 0) % xpForNextLevel;
+    const progressPercent = (currentLevelXP / xpForNextLevel) * 100;
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
@@ -84,27 +89,54 @@ export const DashboardOverview: React.FC = () => {
             <div className="bg-gradient-to-r from-red-600 to-red-800 rounded-2xl p-8 text-white shadow-lg relative overflow-hidden">
                 <div className="relative z-10">
                     <h1 className="text-3xl font-bold mb-2">{getGreeting()}, {user?.name}!</h1>
-                    <p className="text-red-100 text-lg">Selamat datang kembali di LPK Merdeka</p>
+                    <p className="text-red-100 text-lg">Siap untuk melanjutkan progress belajarmu hari ini?</p>
                 </div>
                 <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16"></div>
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {/* Total XP & Level */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+                {/* Daily Streak - NEW */}
+                <div className="bg-white dark:bg-zinc-900 rounded-xl p-6 border border-gray-100 dark:border-zinc-800 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+                    {/* Flame Effect Background */}
+                    <div className="absolute -right-4 -bottom-4 text-orange-500/10 group-hover:text-orange-500/20 transition-colors">
+                        <FaFire size={100} />
+                    </div>
+                    <div className="flex items-center justify-between mb-4 relative z-10">
+                        <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/20 text-orange-600 dark:text-orange-500 rounded-lg flex items-center justify-center text-xl">
+                            <FaFire className="animate-pulse" />
+                        </div>
+                    </div>
+                    <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-1 relative z-10">
+                        {stats?.currentStreak || 0} Hari
+                    </h3>
+                    <p className="text-sm text-gray-500 relative z-10">Daily Streak</p>
+                </div>
+
+                {/* Total XP & Level - ENHANCED */}
                 <div className="bg-white dark:bg-zinc-900 rounded-xl p-6 border border-gray-100 dark:border-zinc-800 shadow-sm hover:shadow-md transition-shadow">
-                    <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center justify-between mb-2">
                         <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/20 text-purple-600 dark:text-purple-500 rounded-lg flex items-center justify-center text-xl">
                             <FaStar />
                         </div>
                         <span className="text-xs font-bold text-purple-600 bg-purple-100 dark:bg-purple-900/20 px-2 py-1 rounded">
-                            Level {stats?.level || 1}
+                            Lvl {stats?.level || 1}
                         </span>
                     </div>
-                    <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
                         {stats?.totalXP.toLocaleString() || 0} XP
                     </h3>
-                    <p className="text-sm text-gray-500">Total Experience Points</p>
+
+                    {/* Level Progress Bar */}
+                    <div className="w-full bg-gray-100 dark:bg-zinc-800 h-2 rounded-full overflow-hidden mb-1">
+                        <div
+                            className="bg-purple-600 h-full rounded-full transition-all duration-1000"
+                            style={{ width: `${progressPercent}%` }}
+                        />
+                    </div>
+                    <p className="text-xs text-gray-500 text-right">
+                        {Math.floor(xpForNextLevel - currentLevelXP)} XP menuju Level {(stats?.level || 1) + 1}
+                    </p>
                 </div>
 
                 {/* Rank */}
@@ -117,7 +149,7 @@ export const DashboardOverview: React.FC = () => {
                     <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
                         #{stats?.rank || '-'}
                     </h3>
-                    <p className="text-sm text-gray-500">dari {stats?.totalUsers || 0} peserta</p>
+                    <p className="text-sm text-gray-500 ml-0.5">Global Rank</p>
                 </div>
 
                 {/* Certificates */}
@@ -130,7 +162,7 @@ export const DashboardOverview: React.FC = () => {
                     <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
                         {stats?.certificatesCount || 0}
                     </h3>
-                    <p className="text-sm text-gray-500">Sertifikat Diperoleh</p>
+                    <p className="text-sm text-gray-500">Sertifikat</p>
                 </div>
 
                 {/* Pending Quizzes */}
@@ -143,7 +175,7 @@ export const DashboardOverview: React.FC = () => {
                     <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
                         {stats?.pendingQuizzes || 0}
                     </h3>
-                    <p className="text-sm text-gray-500">Kuis Belum Dikerjakan</p>
+                    <p className="text-sm text-gray-500">Kuis Tertunda</p>
                 </div>
             </div>
 
@@ -158,7 +190,7 @@ export const DashboardOverview: React.FC = () => {
                             </div>
                             <div>
                                 <h4 className="font-bold text-gray-900 dark:text-white">Kerjakan Kuis</h4>
-                                <p className="text-sm text-gray-500">Uji pemahamanmu</p>
+                                <p className="text-sm text-gray-500">Dapatkan +100 XP</p>
                             </div>
                         </div>
                     </Link>
@@ -170,7 +202,7 @@ export const DashboardOverview: React.FC = () => {
                             </div>
                             <div>
                                 <h4 className="font-bold text-gray-900 dark:text-white">Tonton Video</h4>
-                                <p className="text-sm text-gray-500">Pelajari materi baru</p>
+                                <p className="text-sm text-gray-500">Dapatkan +50 XP</p>
                             </div>
                         </div>
                     </Link>
@@ -182,7 +214,7 @@ export const DashboardOverview: React.FC = () => {
                             </div>
                             <div>
                                 <h4 className="font-bold text-gray-900 dark:text-white">Baca E-Book</h4>
-                                <p className="text-sm text-gray-500">Perluas wawasan</p>
+                                <p className="text-sm text-gray-500">Dapatkan +30 XP</p>
                             </div>
                         </div>
                     </Link>

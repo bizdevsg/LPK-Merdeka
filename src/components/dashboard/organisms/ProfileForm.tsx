@@ -39,6 +39,7 @@ export const ProfileForm = () => {
     const [zoom, setZoom] = useState(1);
     const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
     const [showCropModal, setShowCropModal] = useState(false);
+    const [imageError, setImageError] = useState(false);
 
     useEffect(() => {
         const fetchProfile = async () => {
@@ -67,6 +68,11 @@ export const ProfileForm = () => {
 
         fetchProfile();
     }, [user]);
+
+    // Reset error when URL changes
+    useEffect(() => {
+        setImageError(false);
+    }, [photoUrl]);
 
     const onCropComplete = useCallback((croppedArea: any, croppedAreaPixels: any) => {
         setCroppedAreaPixels(croppedAreaPixels);
@@ -230,8 +236,14 @@ export const ProfileForm = () => {
                 <div className="flex flex-col md:flex-row items-center gap-6 mb-8">
                     <div className="relative group">
                         <div className="w-24 h-24 bg-gray-100 dark:bg-zinc-800 rounded-full flex items-center justify-center overflow-hidden border-2 border-dashed border-gray-300 dark:border-zinc-700">
-                            {photoUrl ? (
-                                <Image src={photoUrl} alt="Profile" fill className="object-cover" />
+                            {photoUrl && !imageError ? (
+                                <Image
+                                    src={photoUrl}
+                                    alt="Profile"
+                                    fill
+                                    className="object-cover"
+                                    onError={() => setImageError(true)}
+                                />
                             ) : (
                                 <FaUser className="text-4xl text-gray-400" />
                             )}

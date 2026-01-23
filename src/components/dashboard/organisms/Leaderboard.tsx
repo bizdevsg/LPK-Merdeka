@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { FaCrown, FaMedal, FaUserCircle } from 'react-icons/fa';
+import { Avatar } from '@/components/shared/atoms/Avatar';
 
 interface LeaderboardEntry {
     rank: number;
@@ -8,6 +9,8 @@ interface LeaderboardEntry {
     points: number;
     level: number;
 }
+
+
 
 export const Leaderboard: React.FC = () => {
     const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
@@ -60,7 +63,7 @@ export const Leaderboard: React.FC = () => {
                         </thead>
                         <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
                             {leaderboard.map((entry) => (
-                                <tr key={entry.rank} className={`hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors ${entry.rank <= 3 ? 'bg-yellow-50/30' : ''}`}>
+                                <tr key={entry.rank} className={`hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors ${entry.rank <= 3 ? 'bg-yellow-50/30 dark:bg-zinc-600/30' : ''}`}>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="flex items-center justify-center w-8 h-8 font-bold rounded-full">
                                             {entry.rank === 1 && <span className="text-2xl">🥇</span>}
@@ -71,15 +74,7 @@ export const Leaderboard: React.FC = () => {
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-zinc-700 overflow-hidden">
-                                                {entry.image ? (
-                                                    <img src={entry.image} alt={entry.name} className="w-full h-full object-cover" />
-                                                ) : (
-                                                    <div className="w-full h-full flex items-center justify-center text-gray-400">
-                                                        <FaUserCircle size={24} />
-                                                    </div>
-                                                )}
-                                            </div>
+                                            <Avatar src={entry.image || ''} alt={entry.name} size={40} />
                                             <span className="font-semibold text-gray-900 dark:text-white">{entry.name}</span>
                                         </div>
                                     </td>
