@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 
-type Theme = 'light';
+type Theme = 'light' | 'dark';
 
 interface ThemeContextType {
     theme: Theme;
@@ -10,11 +10,25 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [theme] = useState<Theme>('light');
+    const [theme, setTheme] = useState<Theme>('light');
 
-    // No-op toggle since we are enforcing light mode
+    useEffect(() => {
+        // Check local storage or system preference on mount
+        const storedTheme = localStorage.getItem('theme') as Theme | null;
+        if (storedTheme) {
+            setTheme(storedTheme);
+            document.documentElement.classList.toggle('dark', storedTheme === 'dark');
+        } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            setTheme('dark');
+            document.documentElement.classList.add('dark');
+        }
+    }, []);
+
     const toggleTheme = () => {
-        console.log("Dark mode is currently disabled.");
+        const newTheme = theme === 'light' ? 'dark' : 'light';
+        setTheme(newTheme);
+        localStorage.setItem('theme', newTheme);
+        document.documentElement.classList.toggle('dark', newTheme === 'dark');
     };
 
     return (
