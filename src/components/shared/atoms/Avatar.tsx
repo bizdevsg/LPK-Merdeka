@@ -52,6 +52,7 @@ export const Avatar: React.FC<AvatarProps> = ({
           alt={alt}
           className="w-full h-full object-cover"
           onError={() => setError(true)}
+          referrerPolicy="no-referrer"
         />
       )}
     </div>
