@@ -216,11 +216,11 @@ export default function DashboardPage() {
                 {/* Main Content Area */}
                 <div className={`min-h-screen transition-all duration-300 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
                     {/* Top Header */}
-                    <header className="sticky top-0 z-20 md:static bg-white md:bg-transparent border-b md:border-none border-gray-100 dark:border-zinc-800 h-16 px-4 md:px-8 flex items-center justify-between">
+                    <header className="sticky top-0 z-20 md:static bg-white dark:bg-zinc-950 md:bg-transparent border-b md:border-none border-gray-100 dark:border-zinc-800 h-16 px-4 md:px-8 flex items-center justify-between">
                         <div className="flex items-center gap-4">
                             <button
                                 onClick={() => setSidebarOpen(true)}
-                                className="md:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                                className="md:hidden p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg"
                             >
                                 <FaBars size={20} />
                             </button>

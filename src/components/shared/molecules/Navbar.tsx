@@ -92,8 +92,8 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <nav
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? "backdrop-blur-md bg-red-600/90 dark:bg-neutral-900/90 shadow-lg" : "bg-red-600 dark:bg-neutral-900"
-        } text-white w-full border-b border-transparent dark:border-neutral-800`}
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? "backdrop-blur-md bg-red-600/90 dark:bg-black/80 shadow-lg" : "bg-red-600 dark:bg-black"
+        } text-white w-full border-b border-transparent dark:border-white/10`}
     >
       <div className="container mx-auto px-6 lg:px-12 xl:px-24 flex items-center justify-between py-4">
         {/* Logo */}

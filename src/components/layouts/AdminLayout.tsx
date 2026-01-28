@@ -119,8 +119,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => 
             {/* Sidebar */}
             <aside className={`
                 fixed inset-y-0 left-0 z-30 bg-white dark:bg-zinc-900 border-r border-gray-200 dark:border-zinc-800 transform transition-all duration-300 ease-in-out
-                ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-                ${isCollapsed ? 'w-20' : 'w-64'}
+                ${sidebarOpen ? 'translate-x-0 w-64' : '-translate-x-full md:translate-x-0 ' + (isCollapsed ? 'w-20' : 'w-64')}
             `}>
                 {/* Collapse Toggle */}
                 <button
@@ -132,15 +131,15 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => 
 
                 <div className={`h-16 flex items-center border-b border-gray-100 dark:border-zinc-800 transition-all ${isCollapsed ? 'justify-center px-0' : 'px-6'}`}>
                     {/* Logo Icon Placeholder if no image */}
-                    <span className={`text-xl font-bold text-red-600 whitespace-nowrap overflow-hidden transition-all duration-300 ${isCollapsed ? 'text-2xl' : ''}`}>
-                        {isCollapsed ? 'A' : 'Admin Panel'}
+                    <span className={`text-xl font-bold text-red-600 whitespace-nowrap overflow-hidden transition-all duration-300 ${!sidebarOpen && isCollapsed ? 'text-2xl' : ''}`}>
+                        {!sidebarOpen && isCollapsed ? 'A' : 'Admin Panel'}
                     </span>
                 </div>
 
                 <div className="p-3 space-y-6 overflow-y-auto h-[calc(100vh-64px)] overflow-x-hidden">
                     {menuItems.map((group, idx) => (
                         <div key={idx}>
-                            {!isCollapsed ? (
+                            {(sidebarOpen || !isCollapsed) ? (
                                 <div
                                     className="flex items-center justify-between px-3 mb-2 cursor-pointer group/header"
                                     onClick={() => toggleGroup(group.group)}
@@ -156,19 +155,19 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => 
                                 <div className="h-px bg-gray-100 dark:bg-zinc-800 mx-2 my-2" />
                             )}
 
-                            <div className={`space-y-1 transition-all duration-300 overflow-hidden ${(!isCollapsed && collapsedGroups[group.group]) ? 'max-h-0 opacity-0' : 'max-h-[500px] opacity-100'}`}>
+                            <div className={`space-y-1 transition-all duration-300 overflow-hidden ${((sidebarOpen || !isCollapsed) && collapsedGroups[group.group]) ? 'max-h-0 opacity-0' : 'max-h-[500px] opacity-100'}`}>
                                 {group.items.map((item) => (
                                     <Link
                                         key={item.href}
                                         href={item.href}
-                                        title={isCollapsed ? item.label : undefined}
-                                        className={`flex items-center ${isCollapsed ? 'justify-center px-0' : 'px-3 gap-3'} py-2 rounded-lg text-sm font-medium transition-colors ${isActive(item.href)
+                                        title={(!sidebarOpen && isCollapsed) ? item.label : undefined}
+                                        className={`flex items-center ${(sidebarOpen || !isCollapsed) ? 'px-3 gap-3' : 'justify-center px-0'} py-2 rounded-lg text-sm font-medium transition-colors ${isActive(item.href)
                                             ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
                                             : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-zinc-800 hover:text-gray-900 dark:hover:text-gray-200'
                                             }`}
                                     >
                                         <span className="text-lg flex-shrink-0">{item.icon}</span>
-                                        <span className={`whitespace-nowrap overflow-hidden transition-all duration-300 ${isCollapsed ? 'w-0 opacity-0 hidden' : 'w-auto opacity-100'}`}>
+                                        <span className={`whitespace-nowrap overflow-hidden transition-all duration-300 ${(!sidebarOpen && isCollapsed) ? 'w-0 opacity-0 hidden' : 'w-auto opacity-100'}`}>
                                             {item.label}
                                         </span>
                                     </Link>

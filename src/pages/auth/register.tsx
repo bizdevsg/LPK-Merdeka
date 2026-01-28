@@ -85,9 +85,10 @@ export default function SignUp() {
                 {/* Right Side - Form */}
                 <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 lg:p-12 h-full relative overflow-y-auto">
                     {/* Back to Home Button */}
+                    {/* Back to Home Button - Desktop (Absolute) */}
                     <Link
                         href="/"
-                        className="absolute top-6 left-6 flex items-center gap-2 text-sm text-gray-500 hover:text-red-600 transition-colors group"
+                        className="hidden lg:flex absolute top-6 left-6 items-center gap-2 text-sm text-gray-500 hover:text-red-600 transition-colors group"
                     >
                         <svg className="w-4 h-4 group-hover:-translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -96,6 +97,18 @@ export default function SignUp() {
                     </Link>
 
                     <div className="w-full max-w-[440px] h-full flex flex-col justify-center py-6">
+                        {/* Back to Home Button - Mobile (In Flow) */}
+                        <div className="lg:hidden w-full mb-6">
+                            <Link
+                                href="/"
+                                className="flex items-center gap-2 text-sm text-gray-500 hover:text-red-600 transition-colors group"
+                            >
+                                <svg className="w-4 h-4 group-hover:-translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                                </svg>
+                                <span>Back to Home</span>
+                            </Link>
+                        </div>
                         <div className="space-y-2 text-center lg:text-left mb-8">
                             <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Create Account</h1>
                             <p className="text-gray-500 dark:text-gray-400">Fill in your details to get started</p>

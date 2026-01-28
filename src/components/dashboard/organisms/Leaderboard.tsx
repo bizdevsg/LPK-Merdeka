@@ -50,7 +50,8 @@ export const Leaderboard: React.FC = () => {
                 <FaCrown className="text-yellow-500" /> Leaderboard
             </h2>
 
-            <div className="bg-white dark:bg-zinc-900 rounded-xl border border-gray-100 dark:border-zinc-800 overflow-hidden shadow-sm">
+            {/* Desktop/Tablet Table View */}
+            <div className="hidden md:block bg-white dark:bg-zinc-900 rounded-xl border border-gray-100 dark:border-zinc-800 overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
                     <table className="w-full">
                         <thead className="bg-gray-50 dark:bg-zinc-800/50">
@@ -63,7 +64,7 @@ export const Leaderboard: React.FC = () => {
                         </thead>
                         <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
                             {leaderboard.map((entry) => (
-                                <tr key={entry.rank} className={`hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors ${entry.rank <= 3 ? 'bg-yellow-50/30 dark:bg-zinc-600/30' : ''}`}>
+                                <tr key={entry.rank} className={`hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors ${entry.rank <= 3 ? 'bg-yellow-50/50 dark:bg-yellow-500/5' : ''}`}>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="flex items-center justify-center w-8 h-8 font-bold rounded-full">
                                             {entry.rank === 1 && <span className="text-2xl">🥇</span>}
@@ -98,6 +99,51 @@ export const Leaderboard: React.FC = () => {
                         </tbody>
                     </table>
                 </div>
+            </div>
+
+            {/* Mobile Card Layout */}
+            <div className="md:hidden space-y-3">
+                {leaderboard.map((entry) => (
+                    <div
+                        key={entry.rank}
+                        className={`flex items-center p-4 rounded-xl border transition-colors ${entry.rank <= 3
+                                ? 'bg-yellow-50/50 dark:bg-yellow-500/10 border-yellow-200 dark:border-yellow-500/20'
+                                : 'bg-white dark:bg-zinc-900 border-gray-100 dark:border-zinc-800'
+                            }`}
+                    >
+                        <div className="flex-shrink-0 w-8 text-center mr-3 font-bold">
+                            {entry.rank === 1 && <span className="text-2xl">🥇</span>}
+                            {entry.rank === 2 && <span className="text-2xl">🥈</span>}
+                            {entry.rank === 3 && <span className="text-2xl">🥉</span>}
+                            {entry.rank > 3 && <span className="text-gray-500 text-lg">#{entry.rank}</span>}
+                        </div>
+
+                        <div className="flex-shrink-0 mr-3">
+                            <Avatar src={entry.image || ''} alt={entry.name} size={40} />
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                            <p className="font-bold text-sm text-gray-900 dark:text-white truncate">
+                                {entry.name}
+                            </p>
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 mt-1">
+                                Lvl {entry.level}
+                            </span>
+                        </div>
+
+                        <div className="text-right flex-shrink-0 ml-2">
+                            <p className="font-bold text-sm text-gray-900 dark:text-white">
+                                {entry.points > 1000 ? `${(entry.points / 1000).toFixed(1)}k` : entry.points}
+                            </p>
+                            <span className="text-[10px] text-gray-500 uppercase">XP</span>
+                        </div>
+                    </div>
+                ))}
+                {leaderboard.length === 0 && (
+                    <div className="px-6 py-12 text-center text-gray-500 bg-white dark:bg-zinc-900 rounded-xl border border-gray-100 dark:border-zinc-800">
+                        Belum ada data leaderboard. Mulailah berlomba!
+                    </div>
+                )}
             </div>
         </div>
     );
