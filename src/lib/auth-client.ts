@@ -2,7 +2,7 @@ import { createAuthClient } from "better-auth/react";
 import { twoFactorClient } from "better-auth/client/plugins";
 
 export const authClient = createAuthClient({
-    baseURL: process.env.NEXT_PUBLIC_BETTER_AUTH_URL || "http://localhost:3000", // the base url of your auth server
+    baseURL: process.env.NEXT_PUBLIC_BETTER_AUTH_URL || "http://localhost:3000",
     plugins: [twoFactorClient()]
 });
 
@@ -11,16 +11,19 @@ export const {
     signOut,
     signUp,
     useSession,
-    resetPassword,
     changePassword,
-    twoFactor: {
-        enable: enableTwoFactor,
-        disable: disableTwoFactor,
-        generateTOTP: generateTwoFactorSecret,
-        verifyTOTP: verifyTwoFactorCode
-    }
+    twoFactor
 } = authClient as any;
 
-// For password reset request - correct function name in better-auth 1.4+
+// Manual exports for better DX (aliasing)
+export const {
+    enable: enableTwoFactor,
+    disable: disableTwoFactor,
+    generateTOTP: generateTwoFactorSecret,
+    verifyTOTP: verifyTwoFactorCode,
+    verifyBackupCode,
+} = twoFactor;
+
+// Backward compatibility for requestPasswordReset
 export const forgetPassword = (authClient as any).requestPasswordReset;
 export const requestPasswordReset = (authClient as any).requestPasswordReset;

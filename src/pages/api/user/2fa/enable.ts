@@ -47,11 +47,19 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
             return res.status(400).json({ message: 'Invalid verification code' });
         }
 
+        // Generate 10 backup codes
+        const backupCodes = Array.from({ length: 10 }, () =>
+            Math.random().toString(36).substr(2, 8).toUpperCase()
+        );
+
         // Enable 2FA using Prisma transaction to ensure consistency
         await prisma.$transaction([
             prisma.twoFactor.update({
                 where: { userId },
-                data: { enabled: true }
+                data: {
+                    enabled: true,
+                    backupCodes: JSON.stringify(backupCodes)
+                }
             }),
             prisma.user.update({
                 where: { id: userId },
@@ -61,7 +69,8 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
 
         return res.status(200).json({
             success: true,
-            message: '2FA enabled successfully'
+            message: '2FA enabled successfully',
+            backupCodes
         });
     } catch (error) {
         console.error('2FA enable error:', error);

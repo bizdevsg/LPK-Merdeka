@@ -75,11 +75,16 @@ export const TwoFactorSetup = () => {
         }
     };
 
+    const [backupCodes, setBackupCodes] = useState<string[]>([]);
+    const [showBackupCodes, setShowBackupCodes] = useState(false);
+    const [isViewMode, setIsViewMode] = useState(false);
+
     const handleEnable2FA = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         setMessage(null);
         setInputError('');
+        setIsViewMode(false);
 
         try {
             // Enable 2FA via our custom endpoint
@@ -105,14 +110,70 @@ export const TwoFactorSetup = () => {
 
             setMessage({ type: 'success', text: '2FA enabled successfully!' });
             setTwoFactorEnabled(true);
-            setShowSetup(false);
-            setVerificationCode('');
+
+            if (data.backupCodes) {
+                setBackupCodes(data.backupCodes);
+                setShowBackupCodes(true);
+            } else {
+                // Fallback if no codes returned (should not happen with new API)
+                setShowSetup(false);
+                setVerificationCode('');
+            }
+
         } catch (error: any) {
             console.error('2FA enable error:', error);
             setMessage({ type: 'error', text: error.message || 'Failed to enable 2FA' });
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleViewBackupCodes = async () => {
+        setLoading(true);
+        setMessage(null);
+        setIsViewMode(true);
+
+        try {
+            const res = await fetch('/api/user/2fa/codes');
+            const data = await res.json();
+
+            if (!res.ok) {
+                throw new Error(data.message || 'Failed to fetch backup codes');
+            }
+
+            if (data.codes && Array.isArray(data.codes)) {
+                setBackupCodes(data.codes);
+                setShowBackupCodes(true);
+            } else {
+                throw new Error('Invalid backup codes format');
+            }
+        } catch (error: any) {
+            console.error('Fetch codes error:', error);
+            setMessage({ type: 'error', text: error.message || 'Failed to fetch backup codes' });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDownloadCodes = () => {
+        const text = `LPK Merdeka 2FA Backup Codes\n\nGenerated on: ${new Date().toLocaleString()}\n\n${backupCodes.join('\n')}\n\nKEEP THESE CODES SAFE!`;
+        const blob = new Blob([text], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'lpk-merdeka-backup-codes.txt';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+
+    const handleDoneSetup = () => {
+        setShowBackupCodes(false);
+        setIsViewMode(false);
+        setShowSetup(false);
+        setVerificationCode('');
+        setBackupCodes([]);
     };
 
     const [showDisableConfirm, setShowDisableConfirm] = useState(false);
@@ -158,6 +219,57 @@ export const TwoFactorSetup = () => {
 
     return (
         <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-gray-100 dark:border-zinc-800 p-6 md:p-8 relative">
+            {/* Backup Codes Modal */}
+            {showBackupCodes && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="bg-white dark:bg-zinc-900 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+                        <div className="p-6 flex flex-col h-full overflow-hidden">
+                            <div className="flex items-center justify-center mb-6">
+                                <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
+                                    <FaKey className="text-green-600 dark:text-green-500 text-xl" />
+                                </div>
+                            </div>
+
+                            <div className="text-center mb-6 flex-shrink-0">
+                                <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                                    {isViewMode ? 'Emergency Backup Codes' : '2FA Enabled Successfully!'}
+                                </h3>
+                                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 mx-auto">
+                                    {isViewMode
+                                        ? 'Below are your active backup codes. You can use these to recover your account if you lose your device.'
+                                        : 'Please save these emergency backup codes. You can use them to recover your account if you lose access to your authentication device.'}
+                                </p>
+                            </div>
+
+                            <div className="bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl p-4 mb-6 flex-1 overflow-y-auto min-h-[150px]">
+                                <div className="grid grid-cols-2 gap-3">
+                                    {backupCodes.map((code, index) => (
+                                        <div key={index} className="bg-white dark:bg-zinc-900 p-2 rounded border border-gray-100 dark:border-zinc-700 text-center font-mono text-sm tracking-wider text-gray-800 dark:text-gray-200 select-all hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
+                                            {code}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3 mt-auto flex-shrink-0">
+                                <button
+                                    onClick={handleDownloadCodes}
+                                    className="flex-1 px-4 py-3 bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-700 dark:text-gray-300 font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+                                >
+                                    <span>Download</span>
+                                </button>
+                                <button
+                                    onClick={handleDoneSetup}
+                                    className="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors"
+                                >
+                                    {isViewMode ? 'Close' : "I've Saved Them"}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Disable Confirmation Modal */}
             {showDisableConfirm && (
                 <div className="absolute inset-0 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm z-50 rounded-xl flex items-center justify-center p-4 animate-in fade-in duration-200">
@@ -338,14 +450,24 @@ export const TwoFactorSetup = () => {
                         </div>
                     </div>
 
-                    <button
-                        onClick={handleDisable2FA}
-                        disabled={loading}
-                        className="px-6 py-3 bg-red-100 dark:bg-red-900/20 hover:bg-red-200 dark:hover:bg-red-900/30 text-red-700 dark:text-red-400 font-medium rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        <FaTimes />
-                        {loading ? 'Disabling...' : 'Disable 2FA'}
-                    </button>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                        <button
+                            onClick={handleViewBackupCodes}
+                            disabled={loading}
+                            className="px-6 py-3 bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-700 dark:text-gray-300 font-medium rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <FaKey />
+                            {loading ? 'Loading...' : 'View Backup Codes'}
+                        </button>
+                        <button
+                            onClick={handleDisable2FA}
+                            disabled={loading}
+                            className="px-6 py-3 bg-red-100 dark:bg-red-900/20 hover:bg-red-200 dark:hover:bg-red-900/30 text-red-700 dark:text-red-400 font-medium rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <FaTimes />
+                            {loading ? 'Disabling...' : 'Disable 2FA'}
+                        </button>
+                    </div>
                 </div>
             )}
         </div>

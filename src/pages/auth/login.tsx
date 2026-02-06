@@ -1,11 +1,10 @@
 "use client";
-
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import Head from "next/head";
-import { FaEye, FaEyeSlash, FaShieldAlt } from "react-icons/fa";
-import { signIn } from "@/lib/auth-client";
+import { FaEye, FaEyeSlash, FaShieldAlt, FaKey } from "react-icons/fa";
+import { signIn, twoFactor, verifyTwoFactorCode, verifyBackupCode } from "@/lib/auth-client";
 import { Input } from "@/components/shared/atoms/Input";
 import { Label } from "@/components/shared/atoms/Label";
 
@@ -19,103 +18,110 @@ export default function SignIn() {
     const [error, setError] = useState("");
     const [step, setStep] = useState<'credentials' | '2fa'>('credentials');
     const [twoFactorCode, setTwoFactorCode] = useState("");
+    const [useBackupCode, setUseBackupCode] = useState(false);
+
+    const performLogin = async () => {
+        setLoading(true); // Ensure loading state is active
+        await signIn.email({
+            email,
+            password,
+            callbackURL: "/dashboard", // Default callback, can be overridden by onSuccess
+            rememberMe
+        }, {
+            onSuccess: (ctx: any) => {
+                setLoading(false);
+                // The library handles redirect unless we prevent it
+                // We can check ctx.data.user.role here if needed
+                if (ctx.data?.user?.role === 'superAdmin' || ctx.data?.user?.role === 'admin') {
+                    router.push('/admin/dashboard');
+                } else {
+                    router.push('/dashboard');
+                }
+            },
+            onError: (ctx: any) => {
+                // Check for 2FA requirement
+                // Better Auth might return specific error code or property
+                const is2FA = ctx.error.message?.includes("2FA") ||
+                    ctx.error.code === "2FA_REQUIRED" ||
+                    (ctx.response as any)?.status === 403 || // Common status for 2FA required
+                    (ctx.response as any)?.status === 428; // Precondition Required for 2FA
+
+                // Inspecting the 'message' is often the most reliable way if code is generic
+                if (is2FA || ctx.error.message?.toLowerCase().includes("two factor")) {
+                    setStep('2fa');
+                    setError("");
+                } else {
+                    setError(ctx.error.message || "Invalid email or password");
+                }
+                setLoading(false);
+            }
+        });
+    };
 
     const handleSignIn = async (e: React.FormEvent) => {
         e.preventDefault();
         setError("");
 
-        // If we are in 2FA step, verify code first
-        if (step === '2fa') {
-            handle2FASubmit(e);
+        if (!email || !password) {
+            setError("Please fill in all fields");
+            return;
+        }
+
+        setLoading(true);
+        // Start login process. performLogin handles step transition if 2FA is needed.
+        performLogin();
+    };
+
+    const handle2FASubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError("");
+
+        const code = twoFactorCode.trim();
+        if (!code || code.length < (useBackupCode ? 8 : 6)) {
+            setError(`Please enter a valid ${useBackupCode ? 'backup' : 'verification'} code`);
             return;
         }
 
         setLoading(true);
 
         try {
-            // 1. Check if 2FA is enabled for this user
-            const checkRes = await fetch('/api/auth/check-2fa', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email })
-            });
-
-            const checkData = await checkRes.json();
-
-            if (!checkRes.ok) {
-                throw new Error(checkData.message || "Login check failed");
-            }
-
-            // 2. If 2FA is required, move to step 2
-            if (checkData.require2FA) {
-                setStep('2fa');
-                setLoading(false);
-                return;
-            }
-
-            // 3. If 2FA is NOT required, proceed with login
-            performLogin();
-
-        } catch (err: any) {
-            setError(err.message || "An unexpected error occurred");
-            setLoading(false);
-        }
-    };
-
-    const handle2FASubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
-        setError("");
-
-        try {
-            // Verify code with backend
-            const verifyRes = await fetch('/api/auth/verify-2fa-code', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, code: twoFactorCode })
-            });
-
-            if (!verifyRes.ok) {
-                throw new Error("Invalid verification code");
-            }
-
-            // If valid, proceed with login
-            performLogin();
-        } catch (err: any) {
-            setError(err.message);
-            setLoading(false);
-        }
-    };
-
-    const performLogin = async () => {
-        await signIn.email(
-            {
-                email,
-                password,
-                rememberMe,
-            },
-            {
-                onRequest: () => {
-                    setLoading(true);
-                },
-                onResponse: () => {
-                    setLoading(false);
-                },
-                onSuccess: async (ctx: any) => {
-                    const session = ctx.data;
-                    if (session?.user?.role === 'superAdmin' || session?.user?.role === 'admin') {
-                        router.push("/admin/dashboard");
-                    } else {
-                        router.push("/dashboard");
+            if (useBackupCode) {
+                // Verify Backup Code using Better Auth plugin
+                await verifyBackupCode({
+                    code: code,
+                    // Better Auth will associate this with the pending sign-in
+                }, {
+                    onSuccess: () => {
+                        // Success! Session is now fully established.
+                        // We can't use ctx.data.user here easily so we redirect to dashboard
+                        // and let the dashboard's own auth check handle role-based routing if needed,
+                        // or we redirect to a generic /dashboard which handles the split.
+                        router.push('/dashboard');
+                    },
+                    onError: (ctx: any) => {
+                        setError(ctx.error.message || "Invalid backup code");
+                        setLoading(false);
                     }
-                },
-                onError: (ctx: any) => {
-                    setError(ctx.error.message || "Login failed. Please check your credentials.");
-                    setStep('credentials'); // Reset to step 1 on failure
-                    setLoading(false);
-                },
+                });
+            } else {
+                // Verify TOTP using Better Auth plugin
+                await verifyTwoFactorCode({
+                    code: code,
+                }, {
+                    onSuccess: () => {
+                        router.push('/dashboard');
+                    },
+                    onError: (ctx: any) => {
+                        setError(ctx.error.message || "Invalid verification code");
+                        setLoading(false);
+                    }
+                });
             }
-        );
+        } catch (err: any) {
+            console.error("2FA Error:", err);
+            setError("An unexpected error occurred. Please try again.");
+            setLoading(false);
+        }
     };
 
     const handleGoogleSignIn = async () => {
@@ -213,7 +219,7 @@ export default function SignIn() {
                             </div>
                         )}
 
-                        <form onSubmit={handleSignIn} className="space-y-6">
+                        <form onSubmit={step === 'credentials' ? handleSignIn : handle2FASubmit} className="space-y-6">
                             {step === 'credentials' ? (
                                 <div className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
                                     <div className="space-y-2">
@@ -285,31 +291,57 @@ export default function SignIn() {
                             ) : (
                                 <div className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
                                     <div className="space-y-2">
-                                        <Label htmlFor="2fa-code">6-Digit Code</Label>
+                                        <Label htmlFor="2fa-code">{useBackupCode ? '8-Character Backup Code' : '6-Digit Code'}</Label>
                                         <div className="relative group">
                                             <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 transition-colors group-focus-within:text-red-600">
-                                                <FaShieldAlt className="w-5 h-5" />
+                                                {useBackupCode ? <FaKey className="w-5 h-5" /> : <FaShieldAlt className="w-5 h-5" />}
                                             </div>
                                             <Input
                                                 id="2fa-code"
                                                 type="text"
-                                                placeholder="000000"
+                                                placeholder={useBackupCode ? "ABC123XY" : "000000"}
                                                 value={twoFactorCode}
-                                                onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    if (useBackupCode) {
+                                                        // Uppercase alphanumeric for backup code
+                                                        setTwoFactorCode(val.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8));
+                                                    } else {
+                                                        // Digits only for TOTP
+                                                        setTwoFactorCode(val.replace(/\D/g, '').slice(0, 6));
+                                                    }
+                                                }}
                                                 required
                                                 autoFocus
-                                                maxLength={6}
+                                                maxLength={useBackupCode ? 8 : 6}
                                                 className="pl-10 py-6 bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 focus:border-red-500 focus:ring-red-500/20 rounded-xl transition-all text-center tracking-widest text-2xl font-mono"
                                             />
                                         </div>
                                     </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => setStep('credentials')}
-                                        className="text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 block text-center"
-                                    >
-                                        &larr; Use another account
-                                    </button>
+
+                                    <div className="flex flex-col gap-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setUseBackupCode(!useBackupCode);
+                                                setTwoFactorCode("");
+                                                setError("");
+                                            }}
+                                            className="text-sm font-medium text-red-600 hover:text-red-700 transition-colors"
+                                        >
+                                            {useBackupCode
+                                                ? "← Use Authenticator App"
+                                                : "Lost your device? Use Backup Code"}
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => setStep('credentials')}
+                                            className="text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                                        >
+                                            Use another account
+                                        </button>
+                                    </div>
                                 </div>
                             )}
 

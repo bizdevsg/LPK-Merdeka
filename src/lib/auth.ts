@@ -182,8 +182,15 @@ export const checkAdmin = (handler: (req: AuthenticatedRequest, res: NextApiResp
         headers: fromNodeHeaders(req.headers)
     });
 
+    console.log('[CheckAdmin] Session:', session ? 'Found' : 'Missing');
+    if (session) {
+        console.log('[CheckAdmin] User ID:', session.user.id);
+        console.log('[CheckAdmin] User Role:', (session.user as any).role);
+    }
+
     // @ts-ignore - role is added via additionalFields but TS might not pick it up on the session type immediately
     if (!session || (session.user.role !== 'admin' && session.user.role !== 'superAdmin')) {
+        console.log('[CheckAdmin] Access Denied - 403');
         return res.status(403).json({ message: "Forbidden" });
     }
 

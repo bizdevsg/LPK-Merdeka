@@ -1,6 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma';
-import bcrypt from 'bcryptjs';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (req.method !== 'POST') {
@@ -11,30 +10,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const { email } = req.body;
 
         if (!email) {
-            return res.status(400).json({ message: 'Email passed is required' });
+            return res.status(400).json({ message: 'Email is required' });
         }
 
-        // Find user
         const user = await prisma.user.findUnique({
             where: { email },
             include: { twoFactor: true }
         });
 
         if (!user) {
-            return res.status(200).json({
-                require2FA: false
-            });
+            return res.status(200).json({ require2FA: false });
         }
 
-        const is2FAEnabled = user.twoFactor && user.twoFactor.enabled;
+        const require2FA = user.twoFactorEnabled && user.twoFactor?.enabled;
 
-        return res.status(200).json({
-            require2FA: !!is2FAEnabled,
-            role: user.role
-        });
+        return res.status(200).json({ require2FA });
 
     } catch (error) {
-        console.error('Login check error:', error);
+        console.error("Check 2FA error:", error);
         return res.status(500).json({ message: 'Internal server error' });
     }
 }
