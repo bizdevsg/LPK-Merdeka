@@ -37,6 +37,11 @@ interface StatsData {
         ebooks: number;
         videos: number;
     };
+    system?: {
+        database: string;
+        api: string;
+        lastUpdated: string;
+    };
 }
 
 export default function AdminDashboard() {
@@ -169,15 +174,21 @@ export default function AdminDashboard() {
                                 <div className="space-y-3">
                                     <div className="flex items-center justify-between">
                                         <span className="text-sm text-gray-600 dark:text-gray-400">Database</span>
-                                        <span className="text-sm font-medium text-green-600 dark:text-green-400">Connected</span>
+                                        <span className={`text-sm font-medium ${stats.system?.database === 'Terhubung' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                            {stats.system?.database}
+                                        </span>
                                     </div>
                                     <div className="flex items-center justify-between">
                                         <span className="text-sm text-gray-600 dark:text-gray-400">API Status</span>
-                                        <span className="text-sm font-medium text-green-600 dark:text-green-400">Operational</span>
+                                        <span className={`text-sm font-medium ${stats.system?.api === 'Terhubung' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                            {stats.system?.api}
+                                        </span>
                                     </div>
                                     <div className="flex items-center justify-between">
                                         <span className="text-sm text-gray-600 dark:text-gray-400">Last Updated</span>
-                                        <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{new Date().toLocaleTimeString()}</span>
+                                        <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                                            {stats.system?.lastUpdated && new Date(stats.system.lastUpdated).toLocaleTimeString()}
+                                        </span>
                                     </div>
                                 </div>
                             </div>

@@ -35,6 +35,14 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
         const totalEbooks = await (prisma as any).ebooks.count();
         const totalVideos = await (prisma as any).videos.count();
 
+        // Check Database Connection
+        let dbStatus = 'Terhubung';
+        try {
+            await prisma.$queryRaw`SELECT 1`;
+        } catch (e) {
+            dbStatus = 'Terputus';
+        }
+
         return res.status(200).json({
             users: {
                 total: totalUsers,
@@ -53,6 +61,11 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
             content: {
                 ebooks: totalEbooks,
                 videos: totalVideos
+            },
+            system: {
+                database: dbStatus,
+                api: 'Terhubung',
+                lastUpdated: new Date().toISOString()
             }
         });
     } catch (error) {
